@@ -10,28 +10,121 @@ name: PR
 # Trigger the workflow on push
 on:
   pull_request:
-    branches: [ master ]
+    branches: [master]
 jobs:
   docker-build:
     runs-on: ubuntu-18.04
     strategy:
       fail-fast: false
     env:
-      IMAGE_FULL: quay.io/eclipse/che-dashboard:next
-      CACHE_IMAGE_FULL: docker.io/cheincubator/che-dashboard:cache
+      DIR_DASHBOARD: che-dashboard
+      DIR_CHE: che
+      IMAGE_TAG: che-dashboard-pull-${{ github.event.pull_request.number }}
+      ORGANIZATION: docker.io/maxura
+      # IMAGE_DASHBOARD_FULL: docker.io/maxura/che-dashboard:che-dashboard-pull-${{ github.event.pull_request.number }}
+      # IMAGE_CHE: docker.io/maxura/che-server:che-dashboard-pull-${{ github.event.pull_request.number }}
     steps:
-    - uses: actions/checkout@v2
-      name: Checkout che-dashboard source code
-    - name: Docker Buildx
-      uses: crazy-max/ghaction-docker-buildx@v1.6.2
-      with:
-        buildx-version: v0.4.1
-    - name: "Docker prepare"
-      run: docker image prune -a -f
-    - name: "Docker build with cache"
-      uses: nick-invision/retry@v1
-      with:
-        timeout_minutes: 100
-        max_attempts: 5
-        retry_wait_seconds: 60
-        command: docker buildx build --platform linux/amd64,linux/s390x --cache-from="type=registry,ref=${CACHE_IMAGE_FULL}" -t ${IMAGE_FULL}  -f apache.Dockerfile .
+
+      - name: Docker Buildx
+        uses: crazy-max/ghaction-docker-buildx@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # - name: "Docker prepare"
+      #   run: docker image prune -a -f
+
+      # - name: "Docker docker.io Login"
+      #   run: docker login -u "${{ secrets.DOCKERHUB_MAXURA_USERNAME }}" -p "${{ secrets.DOCKERHUB_MAXURA_PASSWORD }}" docker.io
+
+      - name: 'che-dashboard: checkout source code'
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.DIR_DASHBOARD }}
+
+      - name: test 1
+        run: |
+          ls
+
+      - name: test 2
+        run: |
+          echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && cd $GITHUB_WORKSPACE/${DIR_DASHBOARD} && ls
+
+      # - name: test 2
+      #   env:
+      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
+      #   run: |
+      #     echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && \
+      #     cd $GITHUB_WORKSPACE/${DIR_DASHBOARD}
+      #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_DASHBOARD_FULL }} --file apache.Dockerfile .
+
+      - name: test 3
+        uses: nick-invision/retry@v1
+        env:
+          IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
+        with:
+          timeout_minutes: 100
+          max_attempts: 5
+          retry_wait_seconds: 60
+          command: |
+            echo $IMAGE_DASHBOARD_FULL && echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && cd $GITHUB_WORKSPACE/${DIR_DASHBOARD} && docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag $IMAGE_DASHBOARD_FULL --file apache.Dockerfile .
+        #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.Dockerfile .
+
+      # - name: 'che-dashboard: Docker Buildx (build)'
+      #   env:
+      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
+      #   run: |
+      #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.Dockerfile .
+
+      # - name: 'che-dashboard: Docker Buildx (build)'
+      #   uses: nick-invision/retry@v1
+      #   env:
+      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
+      #   with:
+      #     timeout_minutes: 100
+      #     max_attempts: 5
+      #     retry_wait_seconds: 60
+      #       # echo $GITHUB_WORKSPACE
+      #     command: |
+      #       docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.dockerfile ${{ env.GITHUB_WORKSPACE }}
+
+      # - name: 'che: checkout source code'
+      #   uses: actions/checkout@v2
+      #   with:
+      #     repository: 'eclipse/che'
+      #     ref: master
+      #     path: ${{ env.DIR_CHE }}
+
+      # - name: 'che-server: Docker Build (build)'
+      #   uses: nick-invision/retry@v1
+      #   env:
+      #     CHE_VERSION: next
+      #   with:
+      #     timeout_minutes: 100
+      #     max_attempts: 5
+      #     retry_wait_seconds: 60
+      #     command: |
+      #       bash ${{ env.DIR_CHE }}/dockerfiles/che/build.sh \
+      #         --tag:${IMAGE_TAG} \
+      #         --build-arg:"CHE_DASHBOARD_VERSION=${IMAGE_TAG},CHE_DASHBOARD_ORGANIZATION=${ORGANIZATION},CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}"
+
+      # - name: "Comment with image name"
+      #   if: ${{ success() }}
+      #   uses: actions/github-script@v3
+      #   env:
+      #     CHE_VERSION: next
+      #     IMAGE_CHE: ${ORGANIZATION}/che-server:${IMAGE_TAG}
+      #   with:
+      #     script: |
+      #       const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
+      #       const imageFull = "${{env.IMAGE_CHE}}";
+      #       github.issues.createComment({ issue_number, owner, repo, body: 'Docker image build succeeded: ' + imageFull });
+
+      # - name: "Docker Logout"
+      #   run: docker logout
