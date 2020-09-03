@@ -19,9 +19,9 @@ jobs:
     env:
       DIR_DASHBOARD: che-dashboard
       DIR_CHE: che
-      IMAGE_TAG: che-dashboard-pull-${{ github.event.pull_request.number }}
+      IMAGE_VERSION: che-dashboard-pull-${{ github.event.pull_request.number }}
       ORGANIZATION: docker.io/maxura
-      # IMAGE_DASHBOARD_FULL: docker.io/maxura/che-dashboard:che-dashboard-pull-${{ github.event.pull_request.number }}
+      # IMAGE_DASHBOARD: docker.io/maxura/che-dashboard:che-dashboard-pull-${{ github.event.pull_request.number }}
       # IMAGE_CHE: docker.io/maxura/che-server:che-dashboard-pull-${{ github.event.pull_request.number }}
     steps:
 
@@ -43,83 +43,42 @@ jobs:
       # - name: "Docker docker.io Login"
       #   run: docker login -u "${{ secrets.DOCKERHUB_MAXURA_USERNAME }}" -p "${{ secrets.DOCKERHUB_MAXURA_PASSWORD }}" docker.io
 
-      - name: 'che-dashboard: checkout source code'
+      # - name: 'che-dashboard: Docker Buildx (build)'
+      #   uses: nick-invision/retry@v1
+      #   env:
+      #     IMAGE_DASHBOARD: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_VERSION }}
+      #   with:
+      #     timeout_minutes: 100
+      #     max_attempts: 5
+      #     retry_wait_seconds: 60
+      #     command: |
+      #       docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag $IMAGE_DASHBOARD --file apache.Dockerfile .
+
+
+      - name: 'che: checkout source code'
         uses: actions/checkout@v2
         with:
-          path: ${{ env.DIR_DASHBOARD }}
+          repository: 'eclipse/che'
+          ref: master
+          path: ${{ env.DIR_CHE }}
 
-      - name: test 1
-        run: |
-          ls
-
-      - name: test 2
-        run: |
-          echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && cd $GITHUB_WORKSPACE/${DIR_DASHBOARD} && ls
-
-      # - name: test 2
-      #   env:
-      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
-      #   run: |
-      #     echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && \
-      #     cd $GITHUB_WORKSPACE/${DIR_DASHBOARD}
-      #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_DASHBOARD_FULL }} --file apache.Dockerfile .
-
-      - name: test 3
+      - name: 'che-server: Docker Build (build)'
         uses: nick-invision/retry@v1
         env:
-          IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
+          CHE_VERSION: next
         with:
           timeout_minutes: 100
           max_attempts: 5
           retry_wait_seconds: 60
           command: |
-            echo $IMAGE_DASHBOARD_FULL && echo $GITHUB_WORKSPACE/${DIR_DASHBOARD} && cd $GITHUB_WORKSPACE/${DIR_DASHBOARD} && docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag $IMAGE_DASHBOARD_FULL --file apache.Dockerfile .
-        #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.Dockerfile .
-
-      # - name: 'che-dashboard: Docker Buildx (build)'
-      #   env:
-      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
-      #   run: |
-      #     docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.Dockerfile .
-
-      # - name: 'che-dashboard: Docker Buildx (build)'
-      #   uses: nick-invision/retry@v1
-      #   env:
-      #     IMAGE_DASHBOARD_FULL: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_TAG }}
-      #   with:
-      #     timeout_minutes: 100
-      #     max_attempts: 5
-      #     retry_wait_seconds: 60
-      #       # echo $GITHUB_WORKSPACE
-      #     command: |
-      #       docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag ${{ env.IMAGE_TAG }} --file apache.dockerfile ${{ env.GITHUB_WORKSPACE }}
-
-      # - name: 'che: checkout source code'
-      #   uses: actions/checkout@v2
-      #   with:
-      #     repository: 'eclipse/che'
-      #     ref: master
-      #     path: ${{ env.DIR_CHE }}
-
-      # - name: 'che-server: Docker Build (build)'
-      #   uses: nick-invision/retry@v1
-      #   env:
-      #     CHE_VERSION: next
-      #   with:
-      #     timeout_minutes: 100
-      #     max_attempts: 5
-      #     retry_wait_seconds: 60
-      #     command: |
-      #       bash ${{ env.DIR_CHE }}/dockerfiles/che/build.sh \
-      #         --tag:${IMAGE_TAG} \
-      #         --build-arg:"CHE_DASHBOARD_VERSION=${IMAGE_TAG},CHE_DASHBOARD_ORGANIZATION=${ORGANIZATION},CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}"
+            echo ${GITHUB_WORKSPACE}/${DIR_CHE} && ls ${GITHUB_WORKSPACE}/${DIR_CHE} && echo "bash $GITHUB_WORKSPACE/$DIR_CHE/dockerfiles/che/build.sh --tag:${IMAGE_VERSION} --build-arg:\"CHE_DASHBOARD_VERSION=${IMAGE_VERSION},CHE_DASHBOARD_ORGANIZATION=${ORGANIZATION},CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}\"" && bash $GITHUB_WORKSPACE/$DIR_CHE/dockerfiles/che/build.sh --tag:${IMAGE_VERSION} --build-arg:"CHE_DASHBOARD_VERSION=${IMAGE_VERSION},CHE_DASHBOARD_ORGANIZATION=${ORGANIZATION},CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}"
 
       # - name: "Comment with image name"
       #   if: ${{ success() }}
       #   uses: actions/github-script@v3
       #   env:
       #     CHE_VERSION: next
-      #     IMAGE_CHE: ${ORGANIZATION}/che-server:${IMAGE_TAG}
+      #     IMAGE_CHE: ${ORGANIZATION}/che-server:${IMAGE_VERSION}
       #   with:
       #     script: |
       #       const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
