@@ -62,6 +62,10 @@ jobs:
           ref: master
           path: ${{ env.DIR_CHE }}
 
+      - name: 'che: Maven build'
+        run: |
+          echo ${GITHUB_WORKSPACE}/${DIR_CHE} && cd ${GITHUB_WORKSPACE}/${DIR_CHE} && mvn clean install -DskipTests -U
+
       - name: 'che-server: Docker Build (build)'
         uses: nick-invision/retry@v1
         env:
