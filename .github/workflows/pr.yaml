@@ -67,20 +67,30 @@ jobs:
         with:
           java-version: 11
 
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
       - name: 'che: Maven build'
         run: |
-          echo ${GITHUB_WORKSPACE}/${DIR_CHE} && cd ${GITHUB_WORKSPACE}/${DIR_CHE} && mvn clean install -DskipTests -U
+          echo ${GITHUB_WORKSPACE}/${DIR_CHE} && cd ${GITHUB_WORKSPACE}/${DIR_CHE} && mvn clean install -DskipTests
 
       - name: 'che-server: Docker Build (build)'
         uses: nick-invision/retry@v1
         env:
           CHE_VERSION: next
+          BUILD_COMMAND: bash ${{ env.GITHUB_WORKSPACE }}/${{ env.DIR_CHE }}/dockerfiles/che/build.sh --tag:${{ env.IMAGE_VERSION }} --build-arg:\"CHE_DASHBOARD_VERSION=${{ env.IMAGE_VERSION }},CHE_DASHBOARD_ORGANIZATION='${{ env.ORGANIZATION }}',CHE_WORKSPACE_LOADER_VERSION=${{ env.CHE_VERSION }}\"
         with:
           timeout_minutes: 100
           max_attempts: 5
           retry_wait_seconds: 60
           command: |
-            echo ${GITHUB_WORKSPACE}/${DIR_CHE} && ls ${GITHUB_WORKSPACE}/${DIR_CHE} && echo "bash $GITHUB_WORKSPACE/$DIR_CHE/dockerfiles/che/build.sh --tag:${IMAGE_VERSION} --build-arg:\"CHE_DASHBOARD_VERSION=${IMAGE_VERSION},CHE_DASHBOARD_ORGANIZATION='${ORGANIZATION}',CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}\"" && bash $GITHUB_WORKSPACE/$DIR_CHE/dockerfiles/che/build.sh --tag:${IMAGE_VERSION} --build-arg:"CHE_DASHBOARD_VERSION=${IMAGE_VERSION},CHE_DASHBOARD_ORGANIZATION='${ORGANIZATION}',CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}"
+            echo "$COMMAND"
+        # && bash $GITHUB_WORKSPACE/$DIR_CHE/dockerfiles/che/build.sh --tag:${IMAGE_VERSION} --build-arg:"CHE_DASHBOARD_VERSION=${IMAGE_VERSION},CHE_DASHBOARD_ORGANIZATION='${ORGANIZATION}',CHE_WORKSPACE_LOADER_VERSION=${CHE_VERSION}"
 
       # - name: "Comment with image name"
       #   if: ${{ success() }}
