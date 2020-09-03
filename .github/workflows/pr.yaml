@@ -43,6 +43,11 @@ jobs:
       # - name: "Docker docker.io Login"
       #   run: docker login -u "${{ secrets.DOCKERHUB_MAXURA_USERNAME }}" -p "${{ secrets.DOCKERHUB_MAXURA_PASSWORD }}" docker.io
 
+      - name: 'che-dashboard: checkout source code'
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.DIR_DASHBOARD }}
+
       - name: 'che-dashboard: Docker Buildx (build)'
         uses: nick-invision/retry@v1
         env:
