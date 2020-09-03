@@ -43,17 +43,16 @@ jobs:
       # - name: "Docker docker.io Login"
       #   run: docker login -u "${{ secrets.DOCKERHUB_MAXURA_USERNAME }}" -p "${{ secrets.DOCKERHUB_MAXURA_PASSWORD }}" docker.io
 
-      # - name: 'che-dashboard: Docker Buildx (build)'
-      #   uses: nick-invision/retry@v1
-      #   env:
-      #     IMAGE_DASHBOARD: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_VERSION }}
-      #   with:
-      #     timeout_minutes: 100
-      #     max_attempts: 5
-      #     retry_wait_seconds: 60
-      #     command: |
-      #       docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag $IMAGE_DASHBOARD --file apache.Dockerfile .
-
+      - name: 'che-dashboard: Docker Buildx (build)'
+        uses: nick-invision/retry@v1
+        env:
+          IMAGE_DASHBOARD: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_VERSION }}
+        with:
+          timeout_minutes: 100
+          max_attempts: 5
+          retry_wait_seconds: 60
+          command: |
+            docker buildx build --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache" --platform linux/amd64,linux/s390x --output "type=image,push=false" --tag $IMAGE_DASHBOARD --file apache.Dockerfile .
 
       - name: 'che: checkout source code'
         uses: actions/checkout@v2
