@@ -11,7 +11,7 @@ name: PR
 
 on:
   pull_request:
-    branches: [main-react]
+    branches: [main_react]
 
 env:
   DIR_DASHBOARD: che-dashboard
