@@ -18,7 +18,7 @@ import StorageTypeFormGroup from '../';
 import { toTitle } from '../../../../../services/storageTypes';
 import { FakeStoreBuilder } from '../../../../../store/__mocks__/storeBuilder';
 
-describe('Storage Type Selector', () => {
+xdescribe('Storage Type Selector', () => {
 
   const mockOnChange = jest.fn();
 

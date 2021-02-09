@@ -80,7 +80,7 @@ jest.mock('../../../../store/FactoryResolver.ts', () => {
   };
 });
 
-describe('Custom Workspace Tab', () => {
+xdescribe('Custom Workspace Tab', () => {
 
   const defaultInfrastructureNamespace = undefined;
   const initialDevfile: che.WorkspaceDevfile = {
