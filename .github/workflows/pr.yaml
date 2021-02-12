@@ -9,9 +9,9 @@
 
 name: PR
 
-on:
-  pull_request:
-    branches: [master]
+# on:
+#   pull_request:
+#     branches: [master]
 
 env:
   DIR_DASHBOARD: che-dashboard
