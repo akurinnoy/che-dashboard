@@ -90,8 +90,10 @@ jobs:
     if: always()
     needs: docker-build
     runs-on: ubuntu-18.04
+    env:
+      IMAGE: docker.io/okurinnyi/che-dashboard
     steps:
       -
         name: "test"
         run: |
-          echo ">>> ${{ needs['docker-build'].outputs.amd64 }} ${{ needs['docker-build'].outputs.arm64 }} ${{ needs['docker-build'].outputs.ppc64le }} ${{ needs['docker-build'].outputs.s390x }}"
+          docker manifest create ${{ env.IMAGE }}:next $(echo ${{ needs['docker-build'].outputs.amd64 }} ${{ needs['docker-build'].outputs.arm64 }} ${{ needs['docker-build'].outputs.ppc64le }} ${{ needs['docker-build'].outputs.s390x }})
