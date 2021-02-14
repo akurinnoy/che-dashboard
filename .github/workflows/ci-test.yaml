@@ -87,6 +87,13 @@ jobs:
       IMAGE: docker.io/okurinnyi/che-dashboard
     steps:
       -
+        name: "Docker docker.io Login"
+        uses: docker/login-action@v1
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      -
         name: "Create manifest"
         run: |
           AMEND=""
@@ -110,17 +117,4 @@ jobs:
             echo "[!] Provide at least one image to create manifest list"
             exit 1;
           fi
-          echo "docker manifest create docker.io/okurinnyi/che-dashboard:manifest-next $AMEND"
-      # -
-      #   name: "Docker docker.io Login"
-      #   uses: docker/login-action@v1
-      #   with:
-      #     registry: docker.io
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      # -
-      #   name: "Create manifest"
-      #   run: |
-      #     docker manifest create ${{ env.IMAGE }}:manifest-next \
-      #     $(echo ${{ needs['docker-build'].outputs.amd64 }} ${{ needs['docker-build'].outputs.arm64 }} ${{ needs['docker-build'].outputs.ppc64le }} ${{ needs['docker-build'].outputs.s390x }}) \
-      #     && docker manifest push ${{ env.IMAGE }}:manifest-next
+          docker manifest create docker.io/okurinnyi/che-dashboard:manifest-next $AMEND
