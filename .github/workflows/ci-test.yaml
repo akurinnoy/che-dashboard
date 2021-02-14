@@ -83,7 +83,7 @@ jobs:
       -
         id: result
         name: "Build result"
-        # if: ${{ success() }}
+        if: ${{ success() }}
         run: echo "::set-output name=${{ matrix.arch }}::'--amend ${{ env.IMAGE }}:${{ matrix.arch }}-next'"
 
   result:
