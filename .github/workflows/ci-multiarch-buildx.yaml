@@ -7,18 +7,18 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-name: CI:multiarch
+name: CI:multiarch-buildx
 
-# on:
-#   workflow_dispatch:
-#     inputs: {}
-#   pull_request:
-#     branches:
-#       - master
+on:
+  workflow_dispatch:
+    inputs: {}
+  pull_request:
+    branches:
+      - master
 
 jobs:
 
-  multiarch-build:
+  buildx-build:
     runs-on: ubuntu-18.04
     env:
       IMAGE_FULL: docker.io/okurinnyi/che-dashboard:multiarch-next

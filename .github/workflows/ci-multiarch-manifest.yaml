@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-name: CI:test
+name: CI:multiarch-manifest
 
 on:
   workflow_dispatch:
@@ -20,23 +20,11 @@ jobs:
 
   docker-build:
     runs-on: ubuntu-18.04
-    continue-on-error: ${{ matrix.default == false }}
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        platform: [linux/amd64]
-        default: [true]
-        arch: [amd64]
-        include:
-          - platform: linux/arm64
-            default: false
-            arch: arm64
-          - platform: linux/ppc64le
-            default: false
-            arch: ppc64le
-          - platform: linux/s390x
-            default: false
-            arch: s390x
+        arch: [amd64,arm64,ppc64le,s390x]
     env:
       IMAGE: docker.io/okurinnyi/che-dashboard
       CACHE_IMAGE_FULL: docker.io/okurinnyi/che-dashboard:cache
@@ -53,7 +41,7 @@ jobs:
         name: "Set up QEMU"
         uses: docker/setup-qemu-action@v1
       -
-        name: "Set up Docker Buildx ${{ matrix.platform }}"
+        name: "Set up Docker Buildx ${{ matrix.arch }}"
         uses: docker/setup-buildx-action@v1
       -
         name: "Docker docker.io Login"
@@ -63,23 +51,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       -
-        name: "Build and push ${{ matrix.platform }}"
+        name: "Build and push ${{ matrix.arch }}"
         uses: docker/build-push-action@v2
         with:
           cache-from: type=registry,ref=${{ env.CACHE_IMAGE_FULL }}
           cache-to: type=registry,ref=${{ env.CACHE_IMAGE_FULL }},mode=max
           context: .
           file: ./apache.Dockerfile
-          platforms: ${{ matrix.platform }}
+          platforms: linux/${{ matrix.arch }}
           push: true
           tags: ${{ env.IMAGE }}:${{ matrix.arch }}-next
       -
         id: result
-        name: "Build result"
+        name: "Build result outputs version"
         if: ${{ success() }}
         run: echo "::set-output name=${{ matrix.arch }}::${{ matrix.arch }}-next"
 
-  result:
+  manifest:
     if: always()
     needs: docker-build
     runs-on: ubuntu-18.04
@@ -94,24 +82,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       -
-        name: "Create manifest"
+        name: "Create and push manifest"
         run: |
           AMEND=""
-          AMD64="amd64-next"
+          AMD64_VERSION="${{ needs['docker-build'].outputs.amd64 }}"
           if [ -n $AMD64 ]; then
-            AMEND+=" --amend ${{ env.IMAGE }}:$AMD64";
+            AMEND+=" --amend ${{ env.IMAGE }}:$AMD64_VERSION";
           fi
-          ARM64="arm64-next"
+          ARM64_VERSION="${{ needs['docker-build'].outputs.arm64 }}"
           if [ -n $ARM64 ]; then
-            AMEND+=" --amend ${{ env.IMAGE }}:$ARM64";
+            AMEND+=" --amend ${{ env.IMAGE }}:$ARM64_VERSION";
           fi
-          PPC64lE="ppc64le-next"
+          PPC64lE_VERSION="${{ needs['docker-build'].outputs.ppc64le }}"
           if [ -n $PPC64lE ]; then
-            AMEND+=" --amend ${{ env.IMAGE }}:$PPC64lE";
+            AMEND+=" --amend ${{ env.IMAGE }}:$PPC64lE_VERSION";
           fi
-          S390X="s390x-next"
+          S390X_VERSION="${{ needs['docker-build'].outputs.s390x }}"
           if [ -n $S390X ]; then
-            AMEND+=" --amend ${{ env.IMAGE }}:$S390X";
+            AMEND+=" --amend ${{ env.IMAGE }}:$S390X_VERSION";
           fi
           if [ -z "$AMEND" ]; then
             echo "[!] Provide at least one image to create manifest list"
