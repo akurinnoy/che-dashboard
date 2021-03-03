@@ -23,11 +23,16 @@ import { selectAllWorkspaces, selectWorkspaceById } from '../store/Workspaces/se
 import { WorkspaceStatus } from '../services/helpers/types';
 import { buildIdeLoaderPath, sanitizeLocation } from '../services/helpers/location';
 import { merge } from 'lodash';
+import { lazyInject } from '../inversify.config';
+import { KeycloakAuthService } from '../services/keycloak/auth';
+import { isDevelopment } from '../store/Environment';
+import { isOAuthResponse } from '../store/FactoryResolver';
 
+const PARAM_PRIVATE_FACTORY_FLAG = '_private';
+const MESSAGE_PRIVATE_FACTORY_RESOLVED = 'factory-resolved';
 const WS_ATTRIBUTES_TO_SAVE: string[] = ['workspaceDeploymentLabels', 'workspaceDeploymentAnnotations', 'policies.create'];
 
 const DEFAULT_CREATE_POLICY = 'perclick';
-
 type CreatePolicy = 'perclick' | 'peruser';
 
 type Props =
@@ -57,10 +62,18 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
   private factoryResolver: FactoryResolverStore.State;
   private overrideDevfileObject: Partial<che.WorkspaceDevfile> = {};
 
+  @lazyInject(KeycloakAuthService)
+  private readonly keycloakAuthService: KeycloakAuthService;
+
   constructor(props: Props) {
     super(props);
 
     const { search } = this.props.history.location;
+
+    // this should allows to accept private repo factories in dashboard running in developing environment
+    if (search.indexOf(PARAM_PRIVATE_FACTORY_FLAG) !== -1) {
+      window.postMessage(MESSAGE_PRIVATE_FACTORY_RESOLVED, 'http://localhost');
+    }
 
     this.state = {
       currentStep: LoadFactorySteps.INITIALIZING,
@@ -223,15 +236,17 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
     try {
       await this.props.requestFactoryResolver(location);
     } catch (e) {
-      this.showAlert('Failed to resolve a devfile.');
-      return undefined;
+      if (!isOAuthResponse(e)) {
+        this.showAlert('Failed to resolve a devfile.');
+        return;
+      }
+      // this promise will never be resolved
+      await this.resolvePrivateDevfile(e.attributes.oauth_authentication_url, location);
+      return;
     }
-    if (!this.factoryResolver
-      || !this.factoryResolver.resolver
-      || !this.factoryResolver.resolver.devfile
-      || this.factoryResolver.resolver.location !== location) {
+    if (this.factoryResolver.resolver?.location !== location) {
       this.showAlert('Failed to resolve a devfile.');
-      return undefined;
+      return;
     }
     const { source } = this.factoryResolver.resolver;
     const searchParam = new window.URLSearchParams(this.state.search);
@@ -240,6 +255,53 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
       `\`${source}\` in github repo ${location}`;
     this.setState({ devfileLocationInfo });
     return this.getTargetDevfile();
+  }
+
+  private async resolvePrivateDevfile(oauthUrl: string, location: string): Promise<void> {
+    try {
+      // build redirect URL
+      let redirectHost = window.location.host;
+      if (isDevelopment()) {
+        redirectHost = process.env.SERVER!;
+      }
+      const redirectUrl = new URL('/f', redirectHost);
+      redirectUrl.searchParams.set('url', location);
+      if (isDevelopment()) {
+        redirectUrl.searchParams.set('_private', 'true');
+      }
+      console.log('>>> redirectUrl.toString()', redirectUrl.toString());
+
+      const oauthUrlTmp = new window.URL(oauthUrl);
+      if (KeycloakAuthService.keycloak) {
+        oauthUrlTmp.searchParams.set('token', KeycloakAuthService.keycloak.token as string);
+      }
+      const fullOauthUrl = oauthUrlTmp.toString() + '&redirect_after_login=' + redirectUrl.toString();
+      console.log('>>> fullOauthUrl', fullOauthUrl);
+
+      // production mode
+      if (isDevelopment() === false) {
+        window.location.href = fullOauthUrl;
+      }
+
+      // development mode
+      // this promise won't be resolved nor rejected
+      return new Promise(() => {
+        const listener = async (event: MessageEvent) => {
+          if (typeof event.data !== 'string') {
+            return;
+          }
+          if (event.data.startsWith(MESSAGE_PRIVATE_FACTORY_RESOLVED)) {
+            windowRef?.close();
+            window.location.reload();
+          }
+        };
+        window.addEventListener('message', listener, false);
+        const windowRef = window.open(fullOauthUrl);
+      });
+    } catch (e) {
+      this.showAlert('Failed to open authentication page.');
+      throw e;
+    }
   }
 
   private async resolveWorkspace(devfile: api.che.workspace.devfile.Devfile, attrs: { [key: string]: string }): Promise<che.Workspace | undefined> {
