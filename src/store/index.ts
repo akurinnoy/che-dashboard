@@ -13,7 +13,6 @@
 import { Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
 import * as BrandingStore from './Branding';
-import * as EnvironmentStore from './Environment';
 import * as DevfileRegistriesStore from './DevfileRegistries';
 import * as FactoryResolver from './FactoryResolver';
 import * as InfrastructureNamespaceStore from './InfrastructureNamespace';
@@ -33,7 +32,6 @@ export interface AppState {
   workspaces: WorkspacesStore.State;
   plugins: Plugins.State;
   factoryResolver: FactoryResolver.State;
-  environment: EnvironmentStore.State;
   userPreferences: UserPreferences.State;
 }
 
@@ -46,7 +44,6 @@ export const reducers = {
   infrastructureNamespace: InfrastructureNamespaceStore.reducer,
   plugins: Plugins.reducer,
   factoryResolver: FactoryResolver.reducer,
-  environment: EnvironmentStore.reducer,
   userPreferences: UserPreferences.reducer,
 };
 

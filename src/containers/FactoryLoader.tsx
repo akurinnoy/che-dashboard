@@ -25,7 +25,7 @@ import { buildIdeLoaderPath, sanitizeLocation } from '../services/helpers/locati
 import { merge } from 'lodash';
 import { lazyInject } from '../inversify.config';
 import { KeycloakAuthService } from '../services/keycloak/auth';
-import { isDevelopment } from '../store/Environment';
+import { getEnvironment, isDevEnvironment, isProdEnvironment } from '../services/helpers/environment';
 import { isOAuthResponse } from '../store/FactoryResolver';
 
 const PARAM_PRIVATE_FACTORY_FLAG = '_private';
@@ -259,14 +259,15 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
 
   private async resolvePrivateDevfile(oauthUrl: string, location: string): Promise<void> {
     try {
+      const env = getEnvironment();
       // build redirect URL
       let redirectHost = window.location.host;
-      if (isDevelopment()) {
-        redirectHost = process.env.SERVER!;
+      if (isDevEnvironment(env)) {
+        redirectHost = env.server;
       }
       const redirectUrl = new URL('/f', redirectHost);
       redirectUrl.searchParams.set('url', location);
-      if (isDevelopment()) {
+      if (isDevEnvironment(env)) {
         redirectUrl.searchParams.set('_private', 'true');
       }
       console.log('>>> redirectUrl.toString()', redirectUrl.toString());
@@ -279,7 +280,7 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
       console.log('>>> fullOauthUrl', fullOauthUrl);
 
       // production mode
-      if (isDevelopment() === false) {
+      if (isProdEnvironment(env)) {
         window.location.href = fullOauthUrl;
       }
 

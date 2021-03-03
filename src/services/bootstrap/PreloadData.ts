@@ -16,7 +16,6 @@ import { KeycloakSetupService } from '../keycloak/setup';
 import { AppState } from '../../store';
 import * as BrandingStore from '../../store/Branding';
 import * as DevfileRegistriesStore from '../../store/DevfileRegistries';
-import * as EnvironmentStore from '../../store/Environment';
 import * as InfrastructureNamespaceStore from '../../store/InfrastructureNamespace';
 import * as Plugins from '../../store/Plugins';
 import * as UserProfileStore from '../../store/UserProfile';
@@ -48,8 +47,6 @@ export class PreloadData {
   }
 
   async init(): Promise<void> {
-    this.defineEnvironment();
-
     await this.updateUser();
     await this.updateJsonRpcMasterApi();
 
@@ -65,11 +62,6 @@ export class PreloadData {
       this.updateRegistriesMetadata(settings),
       this.updateDevfileSchema(),
     ]);
-  }
-
-  private defineEnvironment(): void {
-    const { defineEnvironmentMode } = EnvironmentStore.actionCreators;
-    defineEnvironmentMode()(this.store.dispatch, this.store.getState, undefined);
   }
 
   private async updateBranding(): Promise<void> {
