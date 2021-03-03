@@ -26,6 +26,7 @@ import { AppThunk } from '../../../store';
 jest.mock('../../../store/Workspaces/index', () => {
   return {
     actionCreators: {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       deleteWorkspace: (id: string): AppThunk<Action, Promise<void>> => async (): Promise<void> => {
         return Promise.resolve();
       },

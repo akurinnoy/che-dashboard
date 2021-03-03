@@ -11,11 +11,12 @@
  */
 
 import { Action, Reducer } from 'redux';
+import { RequestError } from '@eclipse-che/workspace-client';
+import { AxiosResponse } from 'axios';
 import { FactoryResolver } from '../services/helpers/types';
-import { AppThunk } from './';
 import { container } from '../inversify.config';
 import { CheWorkspaceClient } from '../services/cheWorkspaceClient';
-import { RequestError } from '@eclipse-che/workspace-client';
+import { AppThunk } from './';
 
 const WorkspaceClient = container.get(CheWorkspaceClient);
 
@@ -78,7 +79,7 @@ export const actionCreators: ActionCreators = {
       return;
     } catch (e) {
       const error = e as RequestError;
-      const response = error.response!;
+      const response = error.response as AxiosResponse;
       const responseData = response.data;
       if (response.status === 401 && isOAuthResponse(responseData)) {
         throw responseData;
