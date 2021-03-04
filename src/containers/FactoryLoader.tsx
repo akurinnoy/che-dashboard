@@ -261,7 +261,7 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
     try {
       const env = getEnvironment();
       // build redirect URL
-      let redirectHost = window.location.host;
+      let redirectHost = window.location.protocol + '//' + window.location.host;
       if (isDevEnvironment(env)) {
         redirectHost = env.server;
       }
