@@ -265,6 +265,7 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
       if (isDevEnvironment(env)) {
         redirectHost = env.server;
       }
+      console.log('>>> redirectHost', redirectHost);
       const redirectUrl = new URL('/f', redirectHost);
       redirectUrl.searchParams.set('url', location);
       if (isDevEnvironment(env)) {
@@ -272,6 +273,7 @@ export class FactoryLoaderContainer extends React.PureComponent<Props, State> {
       }
       console.log('>>> redirectUrl.toString()', redirectUrl.toString());
 
+      console.log('>>> oauthUrl', oauthUrl);
       const oauthUrlTmp = new window.URL(oauthUrl);
       if (KeycloakAuthService.keycloak) {
         oauthUrlTmp.searchParams.set('token', KeycloakAuthService.keycloak.token as string);
