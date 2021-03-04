@@ -60,6 +60,7 @@ module.exports = env => {
     },
     plugins: [
       new webpack.DefinePlugin({
+        __isBrowser__: "true",
         'process.env.ENVIRONMENT': JSON.stringify('development'),
         'process.env.SERVER': JSON.stringify(env.server),
       }),
