@@ -71,6 +71,16 @@ jobs:
         with:
           fullCoverageDiff: false
 
+  dash-licenses:
+    runs-on: ubuntu-18.04
+    steps:
+      -
+        name: "Checkout Che Dashboard source code"
+        uses: actions/checkout@v2
+      -
+        name: "Check licenses restrictions"
+        run: docker run --rm --entrypoint /workspace/entrypoint-check.sh -v ${PWD}:/workspace/project docker.io/okurinnyi/dash-licenses:next
+
   docker-build:
     needs: build-and-test
     runs-on: ubuntu-18.04
