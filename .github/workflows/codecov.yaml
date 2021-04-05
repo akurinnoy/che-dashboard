@@ -7,25 +7,23 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
-name: PR
+name: CODECOV
 
 on:
+  push:
+    branches: 
+      - master
   pull_request:
-    branches: [master]
-
-env:
-  DIR_DASHBOARD: che-dashboard
-  DIR_CHE: che
-  IMAGE_VERSION: che-dashboard-pull-${{ github.event.pull_request.number }}
-  ORGANIZATION: docker.io/maxura
+    branches:
+      - master
 
 jobs:
 
-  build-and-test:
+  coverage:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x]
+        node-version: [14.x]
     steps:
       -
         name: "Checkout Che Dashboard source code"
@@ -46,5 +44,3 @@ jobs:
       -
         name: "Build Codecov report"
         uses: codecov/codecov-action@v1
-        with:
-            token: ${{ secrets.CODECOV_TOKEN }}
