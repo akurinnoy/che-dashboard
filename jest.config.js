@@ -31,7 +31,7 @@ module.exports = {
   },
   maxWorkers: 4,
   setupFilesAfterEnv: ['./jest.setup.ts'],
-  collectCoverage: true,
+  collectCoverage: false,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
 
@@ -45,6 +45,11 @@ module.exports = {
     '!src/Routes.tsx',
   ],
   coverageDirectory: './coverage',
+  coverageReporters: [
+    'html',
+    'lcov',
+    'text-summary',
+  ],
   coverageThreshold: {
     global: {
       statements: 50,
