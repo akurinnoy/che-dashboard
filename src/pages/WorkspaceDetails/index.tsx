@@ -29,7 +29,6 @@ import {
 import Head from '../../components/Head';
 import { WorkspaceDetailsTab, WorkspaceStatus } from '../../services/helpers/types';
 import Header from './Header';
-import CheProgress from '../../components/Progress';
 import { AppState } from '../../store';
 import { HeaderActionSelect } from './Header/Actions';
 import { lazyInject } from '../../inversify.config';
@@ -176,7 +175,6 @@ export class WorkspaceDetails extends React.PureComponent<Props, State> {
           )}
           <Tabs activeKey={this.state.activeTabKey} onSelect={this.handleTabClick}>
             <Tab eventKey={WorkspaceDetailsTab.Overview} title={WorkspaceDetailsTab[WorkspaceDetailsTab.Overview]}>
-              <CheProgress isLoading={this.props.isLoading} />
               <OverviewTab
                 ref={this.overviewTabPageRef}
                 workspace={workspace}
@@ -184,7 +182,6 @@ export class WorkspaceDetails extends React.PureComponent<Props, State> {
               />
             </Tab>
             <Tab eventKey={WorkspaceDetailsTab.Devfile} title={WorkspaceDetailsTab[WorkspaceDetailsTab.Devfile]}>
-              <CheProgress isLoading={this.props.isLoading} />
               <EditorTab
                 ref={this.editorTabPageRef}
                 workspace={workspace}

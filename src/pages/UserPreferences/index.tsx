@@ -29,7 +29,6 @@ import { History } from 'history';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import Head from '../../components/Head';
-import CheProgress from '../../components/Progress';
 import { lazyInject } from '../../inversify.config';
 import { AppAlerts } from '../../services/alerts/appAlerts';
 import { AlertItem } from '../../services/helpers/types';
@@ -296,7 +295,6 @@ export class UserPreferences extends React.PureComponent<Props, State> {
           activeKey={this.state.activeTabKey}
           onSelect={(event, tabKey) => this.handleTabClick(tabKey as string)}>
           <Tab id="container-registries-tab" eventKey={CONTAINER_REGISTRIES_TAB_KEY} title="Container Registries">
-            <CheProgress isLoading={isLoading} />
             <EditRegistryModal
               onCancel={() => this.setEditModalStatus(false)}
               onChange={_registry => this.handleRegistryChange(_registry)}
