@@ -106,9 +106,6 @@ Array [
     role="tabpanel"
     tabIndex={0}
   >
-    <span>
-      
-    </span>
     <section
       className="pf-c-page__main-section"
     >
@@ -546,9 +543,6 @@ Array [
     role="tabpanel"
     tabIndex={0}
   >
-    <span>
-      
-    </span>
     <section
       className="pf-c-page__main-section"
     >

@@ -17,7 +17,6 @@ import {
   PageSectionVariants,
 } from '@patternfly/react-core';
 import { AppState } from '../../../store';
-import CheProgress from '../../../components/Progress';
 import { SamplesListHeader } from './SamplesListHeader';
 import SamplesListToolbar from './SamplesListToolbar';
 import SamplesListGallery from './SamplesListGallery';
@@ -79,7 +78,6 @@ export class SamplesListTab extends React.PureComponent<Props, State> {
             persistVolumesDefault={this.state.persistVolumesDefault}
             onTemporaryStorageChange={temporary => this.handleTemporaryStorageChange(temporary)} />
         </PageSection>
-        <CheProgress isLoading={isLoading} />
         <PageSection variant={PageSectionVariants.default} style={{ background: '#f0f0f0' }}>
           <SamplesListGallery onCardClick={(devfileContent, stackName) => this.handleSampleCardClick(devfileContent, stackName)} />
         </PageSection>
