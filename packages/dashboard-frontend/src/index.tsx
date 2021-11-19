@@ -22,11 +22,9 @@ import App from './App';
 import { PreloadData } from './services/bootstrap/PreloadData';
 import { container } from './inversify.config';
 import { KeycloakSetupService } from './services/keycloak/setup';
-
 import './overrides.styl';
 
 startApp();
-
 async function startApp(): Promise<void> {
   const keycloakSetupService = container.get(KeycloakSetupService);
   try {
