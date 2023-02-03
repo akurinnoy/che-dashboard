@@ -17,7 +17,7 @@ env:
   DIR_DASHBOARD: che-dashboard
   DIR_CHE: che
   IMAGE_VERSION: pr-${{ github.event.pull_request.number }}
-  ORGANIZATION: quay.io/eclipse
+  ORGANIZATION: quay.io/okurinny
 
 jobs:
 

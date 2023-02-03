@@ -17,7 +17,7 @@ on:
       - main
 
 env:
-  IMAGE: quay.io/eclipse/che-dashboard
+  IMAGE: quay.io/okurinny/che-dashboard
 
 jobs:
 
