@@ -4,4 +4,6 @@
     "**/lib": true,
     "**/coverage": true
   },
+  "jest.jestCommandLine": "yarn test",
+  "jest.rootPath": "/projects/che-dashboard/packages/dashboard-frontend",
 }

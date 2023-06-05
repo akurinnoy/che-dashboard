@@ -94,7 +94,9 @@ describe('Workspace Loader, step START_WORKSPACE', () => {
   });
 
   test('restart callback', async () => {
+    // this deferred object will help run the callback when at the right time
     const deferred = getDefer();
+
     mockOnError.mockImplementationOnce((alertItem: AlertItem) => {
       const restartAction = alertItem.actionCallbacks?.find(action => action.title === 'Restart');
       expect(restartAction).toBeDefined();

@@ -21,8 +21,6 @@ export type State = {
   // todo
 };
 
-// todo maybe rename to TimeLimit
-// todo no children
 export class TimeLimit extends React.Component<Props, State> {
   private readonly toDispose = new DisposableCollection();
 

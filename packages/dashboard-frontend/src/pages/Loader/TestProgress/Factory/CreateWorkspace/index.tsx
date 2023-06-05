@@ -58,6 +58,6 @@ export default class StepFactoryCreateWorkspace extends ProgressStep<Props, Stat
   }
 
   render(): React.ReactElement {
-    return <React.Fragment></React.Fragment>;
+    return <React.Fragment />;
   }
 }
