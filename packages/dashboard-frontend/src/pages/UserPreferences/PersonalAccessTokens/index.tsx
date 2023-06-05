@@ -11,7 +11,7 @@
  */
 
 import { api, helpers } from '@eclipse-che/common';
-import { AlertVariant } from '@patternfly/react-core';
+import { AlertVariant, pluralize } from '@patternfly/react-core';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import ProgressIndicator from '../../../components/Progress';
@@ -34,7 +34,6 @@ import { PersonalAccessTokenAddEditModal } from './AddEditModal';
 import { PersonalAccessTokenDeleteModal } from './DeleteModal';
 import { PersonalAccessTokenEmptyState } from './EmptyState';
 import { PersonalAccessTokenList } from './List';
-import { pluralize } from './pluralize';
 import { EditTokenProps } from './types';
 
 export type Props = MappedProps;
@@ -180,18 +179,18 @@ class PersonalAccessTokens extends React.PureComponent<Props, State> {
     if (successNumber === deleteTokens.length) {
       this.appAlerts.showAlert({
         key: 'delete-tokens-success',
-        title: `${successNumber} ${successTokens} deleted successfully`,
+        title: `${successTokens} deleted successfully`,
         variant: AlertVariant.success,
       });
     } else {
       this.appAlerts.showAlert({
         key: 'delete-tokens-success',
-        title: `${successNumber} of ${deleteTokens.length} ${successTokens} deleted successfully`,
+        title: `${successNumber} of ${successTokens} deleted successfully`,
         variant: AlertVariant.success,
       });
       this.appAlerts.showAlert({
         key: 'delete-tokens-error',
-        title: `Failed to delete ${failedNumber} ${failedTokens}`,
+        title: `Failed to delete ${failedTokens}`,
         variant: AlertVariant.danger,
       });
     }

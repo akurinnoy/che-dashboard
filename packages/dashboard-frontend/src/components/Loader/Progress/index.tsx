@@ -10,15 +10,15 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
+import { Wizard } from '@patternfly/react-core';
 import React from 'react';
-import { Wizard, WizardStep } from '@patternfly/react-core';
-import { LoadingStep } from '../Step';
+import { LoaderStep, LoadingStep } from '../Step';
 
 import styles from './index.module.css';
 
 export type Props = {
   currentStepId: LoadingStep;
-  steps: WizardStep[];
+  loaderSteps: LoaderStep[];
 };
 
 export class LoaderProgress extends React.PureComponent<Props> {
@@ -31,7 +31,9 @@ export class LoaderProgress extends React.PureComponent<Props> {
   }
 
   render(): React.ReactNode {
-    const { currentStepId, steps } = this.props;
+    const { currentStepId, loaderSteps } = this.props;
+
+    const steps = LoaderStep.toWizardSteps(currentStepId, loaderSteps);
 
     return (
       <Wizard

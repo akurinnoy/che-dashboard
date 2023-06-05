@@ -27,7 +27,7 @@ export class LoaderAlert extends React.PureComponent<Props, State> {
       );
     });
     return (
-      <div data-testid="ide-loader-alert">
+      <div data-testid="loader-alert">
         {actionLinks}
         <span data-testid="alert-title">{alertItem.title}</span>
         <span data-testid="alert-body">{alertItem.children}</span>

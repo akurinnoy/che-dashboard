@@ -12,31 +12,29 @@
 
 import React from 'react';
 import renderer, { ReactTestRenderer } from 'react-test-renderer';
-import { WizardStep } from '@patternfly/react-core';
+import { LoaderProgress } from '..';
 import { LoaderStep, LoadingStep } from '../../Step';
 import { buildLoaderSteps, getWorkspaceLoadingSteps } from '../../Step/buildSteps';
-import { LoaderProgress } from '..';
 
 describe('Loader Progress', () => {
   describe('Step INITIALIZATION', () => {
     const currentStepId = LoadingStep.INITIALIZE;
-    let wizardSteps: WizardStep[];
+    let loaderSteps: LoaderStep[];
 
     beforeEach(() => {
       const loadingSteps = getWorkspaceLoadingSteps();
-      const steps = buildLoaderSteps(loadingSteps).values;
-      wizardSteps = LoaderStep.toWizardSteps(currentStepId, steps);
+      loaderSteps = buildLoaderSteps(loadingSteps).values;
     });
 
     test('snapshot', () => {
-      const snapshot = createSnapshot(currentStepId, wizardSteps);
+      const snapshot = createSnapshot(currentStepId, loaderSteps);
       expect(snapshot.toJSON()).toMatchSnapshot();
     });
   });
 });
 
-function getComponent(currentStepId: LoadingStep, wizardSteps: WizardStep[]): React.ReactElement {
-  return <LoaderProgress steps={wizardSteps} currentStepId={currentStepId} />;
+function getComponent(currentStepId: LoadingStep, loaderSteps: LoaderStep[]): React.ReactElement {
+  return <LoaderProgress loaderSteps={loaderSteps} currentStepId={currentStepId} />;
 }
 
 function createSnapshot(...args: Parameters<typeof getComponent>): ReactTestRenderer {

@@ -18,7 +18,7 @@ import styles from './index.module.css';
 
 export type Props = {
   isToast: boolean;
-  alertItem?: AlertItem;
+  alertItem: AlertItem | undefined;
 };
 
 export type State = {

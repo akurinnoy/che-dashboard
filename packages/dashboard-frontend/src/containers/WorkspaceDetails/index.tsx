@@ -30,7 +30,8 @@ import { DEVWORKSPACE_ID_OVERRIDE_ANNOTATION } from '../../services/devfileApi/d
 import { selectDefaultNamespace } from '../../store/InfrastructureNamespaces/selectors';
 import { isEqual } from 'lodash';
 
-type Props = MappedProps & { history: History } & RouteComponentProps<{
+type Props = MappedProps &
+  RouteComponentProps<{
     namespace: string;
     workspaceName: string;
   }>;

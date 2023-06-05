@@ -15,6 +15,16 @@ import { Props } from '..';
 
 export class LoaderProgress extends React.Component<Props> {
   render(): React.ReactNode {
-    return <div data-testid="ide-loader-progress">Dummy loading progress</div>;
+    const { currentStepId, loaderSteps } = this.props;
+    return (
+      <div data-testid="loader-progress">
+        <div data-testid="current-step-id">{currentStepId}</div>
+        {loaderSteps.map(step => (
+          <div key={step.id} data-testid={`step-${step.id}`}>
+            {step.title}
+          </div>
+        ))}
+      </div>
+    );
   }
 }
