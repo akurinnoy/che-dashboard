@@ -10,7 +10,7 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-import { PROPAGATE_FACTORY_ATTRS, REMOTES_ATTR } from '../pages/Loader/ProgressSteps/const';
+import { PROPAGATE_FACTORY_ATTRS, REMOTES_ATTR } from '../pages/Loader/TestProgress/const';
 import { FactoryLocation, FactoryLocationAdapter } from '../services/factory-location-adapter';
 import { sanitizeLocation } from '../services/helpers/location';
 import SessionStorageService, { SessionStorageKey } from '../services/session-storage';

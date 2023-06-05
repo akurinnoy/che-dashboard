@@ -25,7 +25,7 @@ import { AlertItem } from '../../../../../../../services/helpers/types';
 import getComponentRenderer from '../../../../../../../services/__mocks__/getComponentRenderer';
 import { DevWorkspaceBuilder } from '../../../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../../../store/__mocks__/storeBuilder';
-import { MIN_STEP_DURATION_MS } from '../../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../../../const';
 
 jest.mock('../../../../TimeLimit');
 

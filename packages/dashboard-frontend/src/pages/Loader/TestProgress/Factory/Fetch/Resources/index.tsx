@@ -23,7 +23,7 @@ import * as DevfileRegistriesStore from '../../../../../../store/DevfileRegistri
 import { selectDevWorkspaceResources } from '../../../../../../store/DevfileRegistries/selectors';
 import { selectAllWorkspaces } from '../../../../../../store/Workspaces/selectors';
 import { buildFactoryParams, FactoryParams } from '../../../../ProgressSteps/buildFactoryParams';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_RESOLVE_SEC } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_RESOLVE_SEC } from '../../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
 
 export type Props = MappedProps &

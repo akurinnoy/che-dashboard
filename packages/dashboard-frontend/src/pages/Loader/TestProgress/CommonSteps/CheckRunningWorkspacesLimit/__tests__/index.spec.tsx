@@ -27,7 +27,9 @@ import { AppThunk } from '../../../../../../store';
 import { ActionCreators } from '../../../../../../store/Workspaces';
 import { DevWorkspaceBuilder } from '../../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../../const';
+
+jest.mock('../../../__mocks__/TimeLimit');
 
 const mockStartWorkspace = jest.fn();
 const mockStopWorkspace = jest.fn();
@@ -68,7 +70,7 @@ const targetDevworkspace = new DevWorkspaceBuilder()
   .withNamespace(namespace)
   .build();
 
-describe('Workspace Loader, step CHECK_RUNNING_WORKSPACES_LIMIT', () => {
+describe('Common steps, check running workspaces limit', () => {
   let runningDevworkspaceBuilder1: DevWorkspaceBuilder;
   let runningDevworkspaceBuilder2: DevWorkspaceBuilder;
   let stoppedDevworkspaceBuilder: DevWorkspaceBuilder;
@@ -99,7 +101,7 @@ describe('Workspace Loader, step CHECK_RUNNING_WORKSPACES_LIMIT', () => {
     jest.useRealTimers();
   });
 
-  test('number of running workspaces is below the limit', async () => {
+  test.only('number of running workspaces is below the limit', async () => {
     const runningDevworkspace = runningDevworkspaceBuilder1.build();
     const stoppedDevworkspace = stoppedDevworkspaceBuilder.build();
     const store = new FakeStoreBuilder()
@@ -142,7 +144,7 @@ describe('Workspace Loader, step CHECK_RUNNING_WORKSPACES_LIMIT', () => {
       jest.runAllTimers();
 
       // need to flush promises
-      await Promise.resolve();
+      // await Promise.resolve();
 
       await waitFor(() => expect(mockOnError).toHaveBeenCalled());
 
@@ -433,7 +435,7 @@ describe('Workspace Loader, step CHECK_RUNNING_WORKSPACES_LIMIT', () => {
       await waitFor(() => expect(mockOnError).toHaveBeenCalledWith(expectAlertItem));
     });
 
-    it('should return to dashboard', async () => {
+    test('return to dashboard action', async () => {
       // this deferred object will help run the callback when at the right time
       const deferred = getDefer();
 

@@ -23,7 +23,7 @@ import { Workspace } from '../../../../../services/workspace-adapter';
 import { AppState } from '../../../../../store';
 import * as WorkspaceStore from '../../../../../store/Workspaces';
 import { selectAllWorkspaces } from '../../../../../store/Workspaces/selectors';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../const';
 import findTargetWorkspace from '../../../ProgressSteps/findTargetWorkspace';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 

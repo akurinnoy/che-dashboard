@@ -25,7 +25,7 @@ import { AppState } from '../../../../../../store';
 import { selectStartTimeout } from '../../../../../../store/ServerConfig/selectors';
 import * as WorkspaceStore from '../../../../../../store/Workspaces';
 import { selectAllWorkspaces } from '../../../../../../store/Workspaces/selectors';
-import { MIN_STEP_DURATION_MS } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../../const';
 import findTargetWorkspace from '../../../../ProgressSteps/findTargetWorkspace';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
 import { TimeLimit } from '../../../TimeLimit';

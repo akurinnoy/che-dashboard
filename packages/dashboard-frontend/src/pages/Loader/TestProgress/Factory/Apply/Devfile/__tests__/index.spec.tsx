@@ -35,7 +35,7 @@ import {
   POLICIES_CREATE_ATTR,
   REMOTES_ATTR,
   TIMEOUT_TO_CREATE_SEC,
-} from '../../../../../ProgressSteps/const';
+} from '../../../../const';
 import { prepareDevfile } from '../prepareDevfile';
 
 jest.mock('../prepareDevfile.ts');

@@ -26,7 +26,7 @@ import { WorkspaceParams } from '../../../../../../Routes/routes';
 import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { DevWorkspaceBuilder } from '../../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_GET_URL_SEC } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_GET_URL_SEC } from '../../../const';
 
 const isAvailableEndpointMock = jest.fn();
 jest.mock('../../../../../../services/helpers/api-ping', () => ({

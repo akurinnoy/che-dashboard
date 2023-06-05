@@ -15,7 +15,7 @@ import { delay } from '../../../../../services/helpers/delay';
 import { DisposableCollection } from '../../../../../services/helpers/disposable';
 import { AlertItem } from '../../../../../services/helpers/types';
 import { buildFactoryParams, FactoryParams } from '../../../ProgressSteps/buildFactoryParams';
-import { MIN_STEP_DURATION_MS } from '../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 
 export type Props = ProgressStepProps & {

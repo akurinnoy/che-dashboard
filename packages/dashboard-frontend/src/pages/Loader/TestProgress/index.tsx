@@ -13,14 +13,15 @@
 import { Wizard, WizardContext, WizardStep } from '@patternfly/react-core';
 import { History } from 'history';
 import React from 'react';
-import { connect, ConnectedProps } from 'react-redux';
+import { ConnectedProps, connect } from 'react-redux';
 import { LoaderAlert } from '../../../components/Loader/Alert';
-import { getLoaderMode, LoaderMode } from '../../../containers/Loader/getLoaderMode';
+import findTargetWorkspace from '../../../containers/Loader/findTargetWorkspace';
+import { LoaderMode, getLoaderMode } from '../../../containers/Loader/getLoaderMode';
 import { AlertItem, DevWorkspaceStatus } from '../../../services/helpers/types';
 import { AppState } from '../../../store';
 import * as WorkspaceStore from '../../../store/Workspaces';
 import { selectAllWorkspaces } from '../../../store/Workspaces/selectors';
-import findTargetWorkspace from '../ProgressSteps/findTargetWorkspace';
+import StepCheckRunningWorkspacesLimit from './CommonSteps/CheckRunningWorkspacesLimit';
 import StepFactoryApplyDevfile from './Factory/Apply/Devfile';
 import StepFactoryCreateWorkspace from './Factory/CreateWorkspace';
 import StepFactoryFetchDevfile from './Factory/Fetch/Devfile';
@@ -89,6 +90,7 @@ class TestProgress extends React.PureComponent<Props, State> {
 
     return [
       showFactorySteps ? this.getFactoryInitStep() : this.getWorkspaceInitStep(),
+      ...this.getCommonSteps(),
       ...((showFactorySteps ? this.getFactorySteps() : []) as any),
       ...this.getWorkspaceSteps(),
     ];
@@ -130,6 +132,29 @@ class TestProgress extends React.PureComponent<Props, State> {
         />
       ),
     };
+  }
+
+  private getCommonSteps(): WizardStep[] {
+    const { history } = this.props;
+
+    const loaderMode = getLoaderMode(history.location);
+
+    const matchParams = loaderMode.mode === 'workspace' ? loaderMode.workspaceParams : undefined;
+
+    return [
+      {
+        name: StepCheckRunningWorkspacesLimit.buildTitle(),
+        component: (
+          <StepCheckRunningWorkspacesLimit
+            history={history}
+            matchParams={matchParams}
+            onError={alertItem => this.handleError(alertItem)}
+            onNextStep={() => this.handleNextStep()}
+            onRestart={() => this.handleRestart()}
+          />
+        ),
+      },
+    ];
   }
 
   private getFactorySteps(): WizardStep[] {

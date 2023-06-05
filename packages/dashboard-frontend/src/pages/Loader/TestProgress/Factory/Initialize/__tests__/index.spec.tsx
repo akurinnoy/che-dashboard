@@ -27,7 +27,7 @@ import {
   FACTORY_URL_ATTR,
   MIN_STEP_DURATION_MS,
   POLICIES_CREATE_ATTR,
-} from '../../../../ProgressSteps/const';
+} from '../../../const';
 
 const { renderComponent } = getComponentRenderer(getComponent);
 

@@ -15,6 +15,7 @@ import { AlertVariant } from '@patternfly/react-core';
 import { isEqual } from 'lodash';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
+import findTargetWorkspace from '../../../../../containers/Loader/findTargetWorkspace';
 import { ToggleBarsContext } from '../../../../../contexts/ToggleBars';
 import { WorkspaceParams } from '../../../../../Routes/routes';
 import { delay } from '../../../../../services/helpers/delay';
@@ -35,9 +36,8 @@ import {
   selectAllWorkspaces,
   selectRunningWorkspaces,
 } from '../../../../../store/Workspaces/selectors';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../../ProgressSteps/const';
-import findTargetWorkspace from '../../../ProgressSteps/findTargetWorkspace';
-import workspaceStatusIs from '../../../ProgressSteps/workspaceStatusIs';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../const';
+import workspaceStatusIs from '../../workspaceStatusIs';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 import { TimeLimit } from '../../TimeLimit';
 
@@ -56,6 +56,11 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   readonly context: React.ContextType<typeof ToggleBarsContext>;
 
   protected readonly toDispose = new DisposableCollection();
+
+  // todo
+  static buildTitle(): string {
+    return 'Check for limits';
+  }
 
   constructor(props: Props) {
     super(props);
@@ -89,12 +94,10 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
       workspace?.status !== nextWorkspace?.status ||
       workspace?.ideUrl !== nextWorkspace?.ideUrl
     ) {
-      console.log('>>> should update #1');
       return true;
     }
     // set the error for the current step
     if (!isEqual(this.state.lastError, nextState.lastError)) {
-      console.log('>>> should update #2');
       return true;
     }
 
@@ -106,7 +109,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   }
 
   private init() {
-    console.log('>>> init');
     const { runningDevWorkspacesLimitExceeded, runningWorkspaces } = this.props;
     const targetWorkspace = this.findTargetWorkspace(this.props);
     const targetWorkspaceIsRunning = runningWorkspaces.some(w => w.uid === targetWorkspace?.uid);
@@ -126,8 +128,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   protected async runStep(): Promise<boolean> {
     await delay(MIN_STEP_DURATION_MS);
 
-    console.log('>>> runStep');
-
     const { runningWorkspacesLimit } = this.props;
     const { shouldStop, redundantWorkspaceUID } = this.state;
 
@@ -138,16 +138,11 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
       return true;
     }
 
-    console.log('>>> 0');
-    console.debug('>>> redundantWorkspaceUID', redundantWorkspaceUID);
-
     if (redundantWorkspaceUID === undefined) {
       // this will show a notification with action links
       // to ask user which workspace to stop or to switch
       throwRunningWorkspacesExceededError(runningWorkspacesLimit);
     }
-
-    console.log('>>> 1');
 
     // the workspace has been stopped or removed, switch to the next step
     if (
@@ -163,7 +158,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
       return true;
     }
 
-    console.log('>>> 2');
     if (
       workspaceStatusIs(redundantWorkspace, DevWorkspaceStatus.STARTING, DevWorkspaceStatus.RUNNING)
     ) {
@@ -179,7 +173,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
       }
     }
 
-    console.log('>>> 3');
     if (
       workspaceStatusIs(
         redundantWorkspace,
@@ -191,8 +184,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
       // do not switch to the next step
       return false;
     }
-
-    console.log('>>> 4');
 
     // switch to the next step
     return true;
@@ -229,7 +220,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   }
 
   private handleStopRedundantWorkspace(redundantWorkspace: Workspace): void {
-    console.log('>>> handleStopRedundantWorkspace');
     this.setState({
       lastError: undefined,
       redundantWorkspaceUID: redundantWorkspace.uid,
@@ -237,7 +227,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   }
 
   private handleSwitchToWorkspace(workspace: Workspace): void {
-    console.log('>>> handleSwitchToWorkspace');
     // update browsing context
     window.name = workspace.uid;
 
@@ -318,7 +307,6 @@ class StepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
   }
 
   render(): React.ReactNode {
-    console.log('>>> render');
     const redundantWorkspace = this.findRedundantWorkspace(this.props, this.state);
 
     return (

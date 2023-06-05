@@ -32,7 +32,7 @@ import {
   OVERRIDE_ATTR_PREFIX,
   REMOTES_ATTR,
   TIMEOUT_TO_RESOLVE_SEC,
-} from '../../../../../ProgressSteps/const';
+} from '../../../../const';
 
 const mockRequestFactoryResolver = jest.fn();
 const mockIsOAuthResponse = jest.fn();

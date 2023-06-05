@@ -35,7 +35,7 @@ import * as WorkspacesStore from '../../../../../../store/Workspaces';
 import { selectDevWorkspaceWarnings } from '../../../../../../store/Workspaces/devWorkspaces/selectors';
 import { selectAllWorkspaces } from '../../../../../../store/Workspaces/selectors';
 import { buildFactoryParams, FactoryParams } from '../../../../ProgressSteps/buildFactoryParams';
-import { MIN_STEP_DURATION_MS, TIMEOUT_TO_CREATE_SEC } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS, TIMEOUT_TO_CREATE_SEC } from '../../../const';
 import findTargetWorkspace from '../../../../ProgressSteps/findTargetWorkspace';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
 import { getGitRemotes, GitRemote } from './getGitRemotes';

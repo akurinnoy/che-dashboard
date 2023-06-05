@@ -28,7 +28,7 @@ import {
   FACTORY_URL_ATTR,
   MIN_STEP_DURATION_MS,
   TIMEOUT_TO_RESOLVE_SEC,
-} from '../../../../../ProgressSteps/const';
+} from '../../../../const';
 
 const mockRequestResources = jest.fn();
 jest.mock('../../../../../../../store/DevfileRegistries', () => {

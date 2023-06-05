@@ -18,7 +18,7 @@ import { Store } from 'redux';
 import CreateWorkspace from '..';
 import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
-import { MIN_STEP_DURATION_MS } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../../const';
 
 const { renderComponent } = getComponentRenderer(getComponent);
 

@@ -33,7 +33,7 @@ import {
   MIN_STEP_DURATION_MS,
   POLICIES_CREATE_ATTR,
   TIMEOUT_TO_CREATE_SEC,
-} from '../../../../../ProgressSteps/const';
+} from '../../../../const';
 import prepareResources from '../prepareResources';
 
 jest.mock('../prepareResources.ts');

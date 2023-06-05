@@ -24,7 +24,7 @@ import { AppThunk } from '../../../../../../store';
 import { ActionCreators } from '../../../../../../store/Workspaces';
 import { DevWorkspaceBuilder } from '../../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
-import { MIN_STEP_DURATION_MS } from '../../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../../const';
 
 const mockStartWorkspace = jest.fn();
 jest.mock('../../../../../../store/Workspaces/index', () => {

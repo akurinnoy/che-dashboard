@@ -29,7 +29,7 @@ import {
   FactoryParams,
   PoliciesCreate,
 } from '../../../ProgressSteps/buildFactoryParams';
-import { MIN_STEP_DURATION_MS } from '../../../ProgressSteps/const';
+import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 
 export type Props = MappedProps &
