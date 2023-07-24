@@ -32,6 +32,7 @@ import * as PodsStore from './Pods';
 import * as SanityCheckStore from './SanityCheck';
 import * as UserIdStore from './User/Id';
 import * as UserProfileStore from './User/Profile';
+import { storeWorkspaceProgress, StoreWorkspaceProgress } from './WorkspaceProgress';
 import * as WorkspacesStore from './Workspaces';
 
 // the top-level state object
@@ -40,8 +41,8 @@ export interface AppState {
   branding: BrandingStore.State;
   clusterConfig: ClusterConfig.State;
   clusterInfo: ClusterInfo.State;
-  devWorkspaces: DevWorkspacesStore.State;
   devfileRegistries: DevfileRegistriesStore.State;
+  devWorkspaces: DevWorkspacesStore.State;
   dockerConfig: DockerConfigStore.State;
   dwPlugins: DwPluginsStore.State;
   dwServerConfig: DwServerConfigStore.State;
@@ -56,6 +57,7 @@ export interface AppState {
   sanityCheck: SanityCheckStore.State;
   userId: UserIdStore.State;
   userProfile: UserProfileStore.State;
+  workspaceProgress: StoreWorkspaceProgress.State;
   workspaces: WorkspacesStore.State;
 }
 
@@ -80,6 +82,7 @@ export const reducers = {
   sanityCheck: SanityCheckStore.reducer,
   userId: UserIdStore.reducer,
   userProfile: UserProfileStore.reducer,
+  workspaceProgress: storeWorkspaceProgress.reducer,
   workspaces: WorkspacesStore.reducer,
 };
 

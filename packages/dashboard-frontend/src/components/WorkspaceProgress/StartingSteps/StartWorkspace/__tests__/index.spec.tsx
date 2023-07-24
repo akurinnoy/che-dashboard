@@ -18,10 +18,11 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import StartingStepStartWorkspace from '..';
+import { Step } from '../../..';
 import { WorkspaceParams } from '../../../../../Routes/routes';
+import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import { getDefer } from '../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import { AppThunk } from '../../../../../store';
 import { ActionCreators } from '../../../../../store/Workspaces';
 import { DevWorkspaceBuilder } from '../../../../../store/__mocks__/devWorkspaceBuilder';
@@ -56,6 +57,7 @@ const matchParams: WorkspaceParams = {
   namespace,
   workspaceName,
 };
+const stepId = Step.START;
 
 const startTimeout = 300;
 const serverConfig: api.IServerConfig = {
@@ -810,10 +812,11 @@ function getComponent(
         distance={0}
         history={history}
         matchParams={params}
-        onNextStep={mockOnNextStep}
-        onRestart={mockOnRestart}
+        stepId={stepId}
         onError={mockOnError}
         onHideError={mockOnHideError}
+        onNextStep={mockOnNextStep}
+        onRestart={mockOnRestart}
       />
     </Provider>
   );

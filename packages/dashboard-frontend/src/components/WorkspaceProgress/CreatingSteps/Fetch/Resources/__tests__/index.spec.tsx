@@ -17,14 +17,15 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import CreatingStepFetchResources from '..';
+import { Step } from '../../../..';
+import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import devfileApi from '../../../../../../services/devfileApi';
+import { getDefer } from '../../../../../../services/helpers/deferred';
 import {
   DEV_WORKSPACE_ATTR,
   FACTORY_URL_ATTR,
 } from '../../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { getDefer } from '../../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { AppThunk } from '../../../../../../store';
 import { ActionCreators } from '../../../../../../store/DevfileRegistries';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
@@ -57,6 +58,8 @@ const mockOnHideError = jest.fn();
 
 const resourcesUrl = 'https://resources-url';
 const factoryUrl = 'https://factory-url';
+
+const stepId = Step.FETCH;
 
 describe('Creating steps, fetching resources', () => {
   let searchParams: URLSearchParams;
@@ -254,6 +257,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
         distance={0}
         history={history}
         searchParams={searchParams}
+        stepId={stepId}
         onNextStep={mockOnNextStep}
         onRestart={mockOnRestart}
         onError={mockOnError}

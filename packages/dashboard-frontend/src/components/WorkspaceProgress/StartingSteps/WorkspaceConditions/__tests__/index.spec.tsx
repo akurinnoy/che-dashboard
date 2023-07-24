@@ -41,6 +41,7 @@ const matchParams: WorkspaceParams = {
   workspaceName,
 };
 const startTimeout = 500;
+const stepId = 'condition-step-id';
 
 describe('Starting steps, checking workspace conditions', () => {
   const conditionInProgress: ConditionType = {
@@ -303,14 +304,15 @@ function getComponent(
   const component = (
     <React.Fragment>
       <StartingStepWorkspaceConditions
-        distance={0}
         condition={condition}
+        distance={0}
         history={history}
         matchParams={_matchParams}
-        onNextStep={mockOnNextStep}
-        onRestart={mockOnRestart}
+        stepId={stepId}
         onError={mockOnError}
         onHideError={mockOnHideError}
+        onNextStep={mockOnNextStep}
+        onRestart={mockOnRestart}
       />
     </React.Fragment>
   );

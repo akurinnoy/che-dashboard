@@ -15,13 +15,13 @@ import { AlertVariant } from '@patternfly/react-core';
 import { isEqual } from 'lodash';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
+import { delay } from '../../../../../services/helpers/delay';
+import { DisposableCollection } from '../../../../../services/helpers/disposable';
+import { getEnvironment, isDevEnvironment } from '../../../../../services/helpers/environment';
 import {
   buildFactoryParams,
   FactoryParams,
 } from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { delay } from '../../../../../services/helpers/delay';
-import { DisposableCollection } from '../../../../../services/helpers/disposable';
-import { getEnvironment, isDevEnvironment } from '../../../../../services/helpers/environment';
 import { AlertItem } from '../../../../../services/helpers/types';
 import OAuthService, { isOAuthResponse } from '../../../../../services/oauth';
 import SessionStorageService, { SessionStorageKey } from '../../../../../services/session-storage';
@@ -31,11 +31,11 @@ import {
   selectFactoryResolver,
   selectFactoryResolverConverted,
 } from '../../../../../store/FactoryResolver/selectors';
+import { storeWorkspaceProgress } from '../../../../../store/WorkspaceProgress';
 import { selectAllWorkspaces } from '../../../../../store/Workspaces/selectors';
 import ExpandableWarning from '../../../../ExpandableWarning';
 import { MIN_STEP_DURATION_MS, TIMEOUT_TO_RESOLVE_SEC } from '../../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
-import { ProgressStepTitle } from '../../../StepTitle';
 import { TimeLimit } from '../../../TimeLimit';
 import { buildStepName } from './buildStepName';
 
@@ -69,26 +69,47 @@ export type State = ProgressStepState & {
 };
 
 class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
-  protected readonly name = 'Looking for devfile';
+  static readonly stepName = 'Looking for devfile';
+
   protected readonly toDispose = new DisposableCollection();
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> FetchDevfile, constructor');
 
     this.state = {
       factoryParams: buildFactoryParams(props.searchParams),
       shouldResolve: true,
       useDefaultDevfile: false,
-      name: this.name,
+      name: CreatingStepFetchDevfile.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.init();
   }
 
-  public componentDidUpdate() {
+  public componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -194,9 +215,15 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
     ) {
       // the devfile resolved successfully
       const newName = buildStepName(sourceUrl, factoryResolver, factoryResolverConverted);
-      this.setState({
+      console.debug('>>> got newName', newName);
+      // this.setState({
+      //   name: newName,
+      // });
+      this.props.updateStep({
+        id: this.props.stepId,
         name: newName,
       });
+      await delay(1000);
 
       return true;
     }
@@ -310,7 +337,7 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
 
     if (error instanceof ApplyingDevfileError) {
       return {
@@ -382,20 +409,14 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
 
   render(): React.ReactElement {
     const { distance } = this.props;
-    const { name, lastError } = this.state;
 
     const isActive = distance === 0;
-    const isError = lastError !== undefined;
-    const isWarning = false;
 
     return (
       <React.Fragment>
         {isActive && (
           <TimeLimit timeLimitSec={TIMEOUT_TO_RESOLVE_SEC} onTimeout={() => this.handleTimeout()} />
         )}
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
       </React.Fragment>
     );
   }
@@ -411,6 +432,7 @@ const connector = connect(
   mapStateToProps,
   {
     ...FactoryResolverStore.actionCreators,
+    ...storeWorkspaceProgress.actionCreators,
   },
   null,
   {

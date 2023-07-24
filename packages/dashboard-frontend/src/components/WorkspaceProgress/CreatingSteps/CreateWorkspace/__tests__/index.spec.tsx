@@ -16,6 +16,7 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Store } from 'redux';
 import CreateWorkspace from '..';
+import { Step } from '../../..';
 import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import { FakeStoreBuilder } from '../../../../../store/__mocks__/storeBuilder';
 import { MIN_STEP_DURATION_MS } from '../../../const';
@@ -28,6 +29,8 @@ const mockOnError = jest.fn();
 const mockOnHideError = jest.fn();
 
 const searchParams = new URLSearchParams();
+
+const stepId = Step.CREATE;
 
 describe('Creating steps, creating a workspace', () => {
   beforeEach(() => {
@@ -62,6 +65,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
         distance={0}
         history={history}
         searchParams={searchParams}
+        stepId={stepId}
         onNextStep={mockOnNextStep}
         onRestart={mockOnRestart}
         onError={mockOnError}

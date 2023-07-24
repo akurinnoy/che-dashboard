@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { connect, ConnectedProps } from 'react-redux';
 import { delay } from '../../../../services/helpers/delay';
 import { DisposableCollection } from '../../../../services/helpers/disposable';
 import {
@@ -18,32 +19,56 @@ import {
   FactoryParams,
 } from '../../../../services/helpers/factoryFlow/buildFactoryParams';
 import { AlertItem } from '../../../../services/helpers/types';
+import { storeWorkspaceProgress } from '../../../../store/WorkspaceProgress';
 import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
-import { ProgressStepTitle } from '../../StepTitle';
 
-export type Props = ProgressStepProps & {
-  searchParams: URLSearchParams;
-};
+export type Props = MappedProps &
+  ProgressStepProps & {
+    searchParams: URLSearchParams;
+  };
 export type State = ProgressStepState & {
   factoryParams: FactoryParams;
 };
 
-export default class CreatingStepCreateWorkspace extends ProgressStep<Props, State> {
-  protected readonly name = 'Creating a workspace';
+export class CreatingStepCreateWorkspace extends ProgressStep<Props, State> {
+  static readonly stepName = 'Creating a workspace';
+
   protected readonly toDispose = new DisposableCollection();
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> CreateWorkspace, constructor');
 
     this.state = {
       factoryParams: buildFactoryParams(props.searchParams),
-      name: this.name,
+      name: CreatingStepCreateWorkspace.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.prepareAndRun();
+  }
+
+  public componentDidUpdate(prevProps: Props, prevState: State): void {
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
   }
 
   protected async runStep(): Promise<boolean> {
@@ -57,18 +82,13 @@ export default class CreatingStepCreateWorkspace extends ProgressStep<Props, Sta
   }
 
   render(): React.ReactElement {
-    const { distance } = this.props;
-    const { name } = this.state;
-
-    const isError = false;
-    const isWarning = false;
-
-    return (
-      <React.Fragment>
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
-      </React.Fragment>
-    );
+    return <React.Fragment />;
   }
 }
+
+const connector = connect(null, storeWorkspaceProgress.actionCreators, null, {
+  // forwardRef is mandatory for using `@react-mock/state` in unit tests
+  forwardRef: true,
+});
+type MappedProps = ConnectedProps<typeof connector>;
+export default connector(CreatingStepCreateWorkspace);

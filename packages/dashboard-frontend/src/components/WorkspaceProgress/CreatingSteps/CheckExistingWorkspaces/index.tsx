@@ -29,10 +29,10 @@ import {
   selectFactoryResolver,
   selectFactoryResolverConverted,
 } from '../../../../store/FactoryResolver/selectors';
+import { storeWorkspaceProgress } from '../../../../store/WorkspaceProgress';
 import { selectAllWorkspaces } from '../../../../store/Workspaces/selectors';
 import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
-import { ProgressStepTitle } from '../../StepTitle';
 
 export class WorkspacesNameConflictError extends Error {
   constructor(message: string | undefined) {
@@ -53,25 +53,45 @@ export type State = ProgressStepState & {
 };
 
 class CreatingStepCheckExistingWorkspaces extends ProgressStep<Props, State> {
-  protected readonly name = 'Checking existing workspaces';
+  static readonly stepName = 'Checking existing workspaces';
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> CheckExisting, constructor');
 
     this.state = {
       existingWorkspace: undefined,
       factoryParams: buildFactoryParams(props.searchParams),
       shouldCreate: false,
-      name: this.name,
+      name: CreatingStepCheckExistingWorkspaces.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.init();
   }
 
-  public componentDidUpdate() {
+  public componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -197,7 +217,7 @@ class CreatingStepCheckExistingWorkspaces extends ProgressStep<Props, State> {
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
     return {
       key,
       title: 'Existing workspace found',
@@ -217,19 +237,7 @@ class CreatingStepCheckExistingWorkspaces extends ProgressStep<Props, State> {
   }
 
   render(): React.ReactElement {
-    const { distance } = this.props;
-    const { name, lastError } = this.state;
-
-    const isError = lastError !== undefined;
-    const isWarning = false;
-
-    return (
-      <React.Fragment>
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
-      </React.Fragment>
-    );
+    return <React.Fragment />;
   }
 }
 
@@ -240,7 +248,7 @@ const mapStateToProps = (state: AppState) => ({
   factoryResolverConverted: selectFactoryResolverConverted(state),
 });
 
-const connector = connect(mapStateToProps, null, null, {
+const connector = connect(mapStateToProps, storeWorkspaceProgress.actionCreators, null, {
   // forwardRef is mandatory for using `@react-mock/state` in unit tests
   forwardRef: true,
 });

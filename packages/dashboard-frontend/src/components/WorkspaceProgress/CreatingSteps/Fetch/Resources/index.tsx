@@ -30,6 +30,7 @@ import { MIN_STEP_DURATION_MS, TIMEOUT_TO_RESOLVE_SEC } from '../../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
 import { ProgressStepTitle } from '../../../StepTitle';
 import { TimeLimit } from '../../../TimeLimit';
+import { storeWorkspaceProgress } from '../../../../../store/WorkspaceProgress';
 
 export type Props = MappedProps &
   ProgressStepProps & {
@@ -41,25 +42,46 @@ export type State = ProgressStepState & {
 };
 
 class CreatingStepFetchResources extends ProgressStep<Props, State> {
-  protected readonly name = 'Fetching pre-built resources';
+  static readonly stepName = 'Fetching pre-built resources';
+
   protected readonly toDispose = new DisposableCollection();
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> FetchResources, constructor');
 
     this.state = {
       factoryParams: buildFactoryParams(props.searchParams),
       shouldResolve: true,
-      name: this.name,
+      name: CreatingStepFetchResources.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.init();
   }
 
-  public componentDidUpdate() {
+  public componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -158,7 +180,7 @@ class CreatingStepFetchResources extends ProgressStep<Props, State> {
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
     return {
       key,
       title: 'Failed to create the workspace',
@@ -175,20 +197,14 @@ class CreatingStepFetchResources extends ProgressStep<Props, State> {
 
   render(): React.ReactElement {
     const { distance } = this.props;
-    const { name, lastError } = this.state;
 
     const isActive = distance === 0;
-    const isError = lastError !== undefined;
-    const isWarning = false;
 
     return (
       <React.Fragment>
         {isActive && (
           <TimeLimit timeLimitSec={TIMEOUT_TO_RESOLVE_SEC} onTimeout={() => this.handleTimeout()} />
         )}
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
       </React.Fragment>
     );
   }
@@ -203,6 +219,7 @@ const connector = connect(
   mapStateToProps,
   {
     ...DevfileRegistriesStore.actionCreators,
+    ...storeWorkspaceProgress.actionCreators,
   },
   null,
   {

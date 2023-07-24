@@ -10,17 +10,18 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-import { waitFor, screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory } from 'history';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { Store } from 'redux';
 import StartingStepInitialize from '..';
+import { Step } from '../../..';
 import { WorkspaceParams } from '../../../../../Routes/routes';
+import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import { getDefer } from '../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import { DevWorkspaceBuilder } from '../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../store/__mocks__/storeBuilder';
 import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../../const';
@@ -40,6 +41,7 @@ const matchParams: WorkspaceParams = {
   namespace,
   workspaceName,
 };
+const stepId = Step.INITIALIZE;
 
 describe('Starting steps, initializing', () => {
   beforeEach(() => {
@@ -468,6 +470,7 @@ function getComponent(
         distance={0}
         history={history}
         matchParams={params}
+        stepId={stepId}
         onNextStep={mockOnNextStep}
         onRestart={mockOnRestart}
         onError={mockOnError}

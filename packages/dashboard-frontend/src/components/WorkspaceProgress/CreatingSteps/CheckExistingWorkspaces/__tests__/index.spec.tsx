@@ -16,19 +16,20 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Store } from 'redux';
 import CreatingStepCheckExistingWorkspaces from '..';
+import { Step } from '../../..';
 import { ROUTE } from '../../../../../Routes/routes';
+import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
 import devfileApi from '../../../../../services/devfileApi';
+import { getDefer } from '../../../../../services/helpers/deferred';
 import {
   DEV_WORKSPACE_ATTR,
   FACTORY_URL_ATTR,
   POLICIES_CREATE_ATTR,
 } from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { getDefer } from '../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../services/__mocks__/getComponentRenderer';
-import { DevWorkspaceResources } from '../../../../../store/DevfileRegistries';
 import { DevWorkspaceBuilder } from '../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../store/__mocks__/storeBuilder';
+import { DevWorkspaceResources } from '../../../../../store/DevfileRegistries';
 import { MIN_STEP_DURATION_MS } from '../../../const';
 
 const { renderComponent } = getComponentRenderer(getComponent);
@@ -41,6 +42,8 @@ const mockOnHideError = jest.fn();
 
 const resourcesUrl = 'https://resources-url';
 const factoryUrl = 'https://factory-url';
+
+const stepId = Step.CONFLICT_CHECK;
 
 describe('Creating steps, checking existing workspaces', () => {
   beforeEach(() => {
@@ -323,6 +326,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
       distance={0}
       searchParams={searchParams}
       history={history}
+      stepId={stepId}
       onNextStep={mockOnNextStep}
       onRestart={mockOnRestart}
       onError={mockOnError}

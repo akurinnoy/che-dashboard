@@ -19,14 +19,15 @@ import { AppState } from '..';
 import { BrandingData } from '../../services/bootstrap/branding.constant';
 import devfileApi from '../../services/devfileApi';
 import { State as BrandingState } from '../Branding';
-import { DevWorkspaceResources, State as DevfileRegistriesState } from '../DevfileRegistries';
+import { State as DevfileRegistriesState, DevWorkspaceResources } from '../DevfileRegistries';
 import { RegistryEntry } from '../DockerConfig/types';
-import { ConvertedState, ResolverState, State as FactoryResolverState } from '../FactoryResolver';
+import { ConvertedState, State as FactoryResolverState, ResolverState } from '../FactoryResolver';
 import { IGitOauth } from '../GitOauthConfig/types';
 import { State as InfrastructureNamespaceState } from '../InfrastructureNamespaces';
 import { State as PluginsState } from '../Plugins/chePlugins';
 import { State as LogsState } from '../Pods/Logs';
 import { State as UserProfileState } from '../User/Profile';
+import { StoreWorkspaceProgress } from '../WorkspaceProgress';
 import { State as WorkspacesState } from '../Workspaces';
 import mockThunk from './thunk';
 
@@ -159,6 +160,9 @@ export class FakeStoreBuilder {
     personalAccessToken: {
       isLoading: false,
       tokens: [],
+    },
+    workspaceProgress: {
+      steps: {},
     },
   };
 
@@ -429,6 +433,14 @@ export class FakeStoreBuilder {
     this.state.userId.cheUserId = options.cheUserId;
     this.state.userId.error = options.error;
     this.state.userId.isLoading = isLoading;
+    return this;
+  }
+
+  // todo
+  public withWorkspaceProgress(steps: {
+    [stepId: string]: Required<StoreWorkspaceProgress.StepProps>;
+  }) {
+    this.state.workspaceProgress.steps = steps;
     return this;
   }
 

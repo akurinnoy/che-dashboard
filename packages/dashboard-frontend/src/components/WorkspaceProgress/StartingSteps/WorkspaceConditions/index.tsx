@@ -28,6 +28,7 @@ import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 import { ProgressStepTitle } from '../../StepTitle';
 import styles from './index.module.css';
+import { storeWorkspaceProgress } from '../../../../store/WorkspaceProgress';
 
 export type ConditionType = V1alpha2DevWorkspaceStatusConditions &
   (
@@ -61,10 +62,12 @@ export class StartingStepWorkspaceConditions extends ProgressStep<Props, State> 
       isFailed: false,
       name: condition.message || condition.type,
     };
-  }
 
-  protected get name(): string {
-    return this.state.name;
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   private init() {
@@ -89,8 +92,21 @@ export class StartingStepWorkspaceConditions extends ProgressStep<Props, State> 
     this.init();
   }
 
-  public async componentDidUpdate() {
+  public async componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -155,7 +171,7 @@ export class StartingStepWorkspaceConditions extends ProgressStep<Props, State> 
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
     return {
       key,
       title: 'Failed to open the workspace',
@@ -175,24 +191,7 @@ export class StartingStepWorkspaceConditions extends ProgressStep<Props, State> 
   }
 
   render() {
-    const { isFailed, isReady } = this.state;
-
-    const distance = isReady ? 1 : 0;
-    const isError = isFailed;
-    const isWarning = false;
-
-    return (
-      <React.Fragment>
-        <ProgressStepTitle
-          className={styles.conditionTitle}
-          distance={distance}
-          isError={isError}
-          isWarning={isWarning}
-        >
-          {this.name}
-        </ProgressStepTitle>
-      </React.Fragment>
-    );
+    return <React.Fragment />;
   }
 }
 
@@ -201,9 +200,14 @@ const mapStateToProps = (state: AppState) => ({
   startTimeout: selectStartTimeout(state),
 });
 
-const connector = connect(mapStateToProps, WorkspaceStore.actionCreators, null, {
-  // forwardRef is mandatory for using `@react-mock/state` in unit tests
-  forwardRef: true,
-});
+const connector = connect(
+  mapStateToProps,
+  { ...WorkspaceStore.actionCreators, ...storeWorkspaceProgress.actionCreators },
+  null,
+  {
+    // forwardRef is mandatory for using `@react-mock/state` in unit tests
+    forwardRef: true,
+  },
+);
 type MappedProps = ConnectedProps<typeof connector>;
 export default connector(StartingStepWorkspaceConditions);

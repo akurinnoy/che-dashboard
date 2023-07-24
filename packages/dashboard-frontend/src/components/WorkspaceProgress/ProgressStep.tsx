@@ -16,8 +16,10 @@ import React from 'react';
 import { Cancellation, pseudoCancellable } from 'real-cancellable-promise';
 import { DisposableCollection } from '../../services/helpers/disposable';
 import { AlertItem, LoaderTab } from '../../services/helpers/types';
+import { StepId } from '.';
 
 export type ProgressStepProps = {
+  stepId: StepId;
   distance: -1 | 0 | 1 | undefined;
   history: History;
   onError: (alertItem: AlertItem) => void;
@@ -36,7 +38,6 @@ export abstract class ProgressStep<
 > extends React.Component<P, S> {
   protected readonly toDispose = new DisposableCollection();
 
-  protected abstract readonly name: string;
   protected abstract runStep(): Promise<boolean>;
   protected abstract buildAlertItem(error: Error): AlertItem;
 

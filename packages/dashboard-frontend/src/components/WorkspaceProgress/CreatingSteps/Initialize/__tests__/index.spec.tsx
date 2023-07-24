@@ -15,6 +15,10 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Store } from 'redux';
 import CreatingStepInitialize from '..';
+import { Step } from '../../..';
+import getComponentRenderer, {
+  waitFor,
+} from '../../../../../services/__mocks__/getComponentRenderer';
 import {
   DEV_WORKSPACE_ATTR,
   ERROR_CODE_ATTR,
@@ -22,9 +26,6 @@ import {
   POLICIES_CREATE_ATTR,
 } from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
 import { AlertItem } from '../../../../../services/helpers/types';
-import getComponentRenderer, {
-  waitFor,
-} from '../../../../../services/__mocks__/getComponentRenderer';
 import { DevWorkspaceBuilder } from '../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../store/__mocks__/storeBuilder';
 import { MIN_STEP_DURATION_MS } from '../../../const';
@@ -35,6 +36,8 @@ const mockOnNextStep = jest.fn();
 const mockOnRestart = jest.fn();
 const mockOnError = jest.fn();
 const mockOnHideError = jest.fn();
+
+const stepId = Step.INITIALIZE;
 
 describe('Creating steps, initializing', () => {
   const factoryUrl = 'https://factory-url';
@@ -246,6 +249,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
         distance={0}
         history={history}
         searchParams={searchParams}
+        stepId={stepId}
         onNextStep={mockOnNextStep}
         onRestart={mockOnRestart}
         onError={mockOnError}

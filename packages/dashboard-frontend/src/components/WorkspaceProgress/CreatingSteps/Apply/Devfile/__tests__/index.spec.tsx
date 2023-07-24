@@ -14,27 +14,28 @@ import { api } from '@eclipse-che/common';
 import { StateMock } from '@react-mock/state';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryHistory, MemoryHistory } from 'history';
+import { MemoryHistory, createMemoryHistory } from 'history';
 import { dump } from 'js-yaml';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import CreatingStepApplyDevfile, { State } from '..';
-import ExpandableWarning from '../../../../../ExpandableWarning';
+import { Step } from '../../../..';
 import { ROUTE } from '../../../../../../Routes/routes';
+import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import devfileApi from '../../../../../../services/devfileApi';
+import { getDefer } from '../../../../../../services/helpers/deferred';
 import {
-  buildFactoryParams,
   FACTORY_URL_ATTR,
   POLICIES_CREATE_ATTR,
+  buildFactoryParams,
 } from '../../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { getDefer } from '../../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { AppThunk } from '../../../../../../store';
 import { ActionCreators } from '../../../../../../store/Workspaces';
 import { DevWorkspaceBuilder } from '../../../../../../store/__mocks__/devWorkspaceBuilder';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
+import ExpandableWarning from '../../../../../ExpandableWarning';
 import { MIN_STEP_DURATION_MS } from '../../../../const';
 import { prepareDevfile } from '../prepareDevfile';
 
@@ -71,6 +72,8 @@ const devfile = {
     name: devfileName,
   },
 } as devfileApi.Devfile;
+
+const stepId = Step.APPLY;
 
 describe('Creating steps, applying a devfile', () => {
   let searchParams: URLSearchParams;
@@ -678,6 +681,7 @@ function getComponent(
       distance={0}
       searchParams={searchParams}
       history={history}
+      stepId={stepId}
       onNextStep={mockOnNextStep}
       onRestart={mockOnRestart}
       onError={mockOnError}

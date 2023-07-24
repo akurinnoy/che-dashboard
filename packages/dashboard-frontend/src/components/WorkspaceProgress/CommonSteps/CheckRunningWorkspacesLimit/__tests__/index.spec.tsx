@@ -18,6 +18,7 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import CommonStepCheckRunningWorkspacesLimit, { State } from '..';
+import { Step } from '../../..';
 import { WorkspaceParams } from '../../../../../Routes/routes';
 import getComponentRenderer, {
   screen,
@@ -73,6 +74,8 @@ const targetDevworkspace = new DevWorkspaceBuilder()
   .withName(workspaceName)
   .withNamespace(namespace)
   .build();
+
+const stepId = Step.LIMIT_CHECK;
 
 describe('Common steps, check running workspaces limit', () => {
   let runningDevworkspaceBuilder1: DevWorkspaceBuilder;
@@ -448,6 +451,7 @@ function getComponent(store: Store, localState?: Partial<State>): React.ReactEle
       distance={0}
       history={history}
       matchParams={matchParams}
+      stepId={stepId}
       onNextStep={mockOnNextStep}
       onRestart={mockOnRestart}
       onError={mockOnError}

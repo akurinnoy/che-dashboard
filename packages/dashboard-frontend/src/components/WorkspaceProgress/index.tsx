@@ -22,6 +22,7 @@ import { findTargetWorkspace } from '../../services/helpers/factoryFlow/findTarg
 import { getLoaderMode, LoaderMode } from '../../services/helpers/factoryFlow/getLoaderMode';
 import { AlertItem, DevWorkspaceStatus, LoaderTab } from '../../services/helpers/types';
 import { AppState } from '../../store';
+import { storeWorkspaceProgress } from '../../store/WorkspaceProgress';
 import * as WorkspaceStore from '../../store/Workspaces';
 import { selectAllWorkspaces } from '../../store/Workspaces/selectors';
 import { ProgressAlert } from './Alert';
@@ -39,6 +40,7 @@ import StartingStepStartWorkspace from './StartingSteps/StartWorkspace';
 import StartingStepWorkspaceConditions, {
   ConditionType,
 } from './StartingSteps/WorkspaceConditions';
+import StepName from './StepName';
 
 import styles from './index.module.css';
 
@@ -68,7 +70,7 @@ export enum Step {
   OPEN = 'open',
 }
 type ConditionStepId = `condition-${string}`;
-type StepId = Step | ConditionStepId;
+export type StepId = Step | ConditionStepId;
 
 class Progress extends React.PureComponent<Props, State> {
   static contextType = PF.WizardContext;
@@ -92,6 +94,8 @@ class Progress extends React.PureComponent<Props, State> {
       factoryParams,
       initialLoaderMode,
     };
+
+    this.props.clearSteps();
   }
 
   public componentDidMount(): void {
@@ -207,14 +211,15 @@ class Progress extends React.PureComponent<Props, State> {
   }
 
   private getSteps(): PF.WizardStep[] {
+    console.debug('>>> getSteps');
     const { initialLoaderMode } = this.state;
-    const showFactorySteps = initialLoaderMode.mode === 'factory';
+    const showCreationSteps = initialLoaderMode.mode === 'factory';
 
     return [
-      showFactorySteps ? this.getCreationInitStep() : this.getStartingInitStep(),
+      showCreationSteps ? this.getCreationInitStep() : this.getStartingInitStep(),
       ...this.getCommonSteps(),
-      ...(showFactorySteps ? this.getCreationSteps() : []),
-      ...this.getStartingSteps(),
+      ...(showCreationSteps ? this.getCreationSteps() : []),
+      // ...this.getStartingSteps(),
     ];
   }
 
@@ -228,21 +233,24 @@ class Progress extends React.PureComponent<Props, State> {
 
   private getCreationInitStep(): PF.WizardStep {
     const { history, searchParams } = this.props;
+    const stepId = Step.INITIALIZE;
+    console.debug('>>> this.getDistance(INITIALIZE)', this.getDistance(stepId));
 
     return {
-      id: Step.INITIALIZE,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepInitialize.stepName} />,
+      component: (
         <CreatingStepInitialize
-          distance={this.getDistance(Step.INITIALIZE)}
+          distance={this.getDistance(stepId)}
           history={history}
-          searchParams={searchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.INITIALIZE, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.INITIALIZE)}
-          onRestart={tab => this.handleRestartFlow(Step.INITIALIZE, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          searchParams={searchParams}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
@@ -252,20 +260,22 @@ class Progress extends React.PureComponent<Props, State> {
     const loaderMode = getLoaderMode(history.location);
     const matchParams = loaderMode.mode === 'workspace' ? loaderMode.workspaceParams : undefined;
 
+    const stepId = Step.INITIALIZE;
     return {
-      id: Step.INITIALIZE,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={StartingStepInitialize.stepName} />,
+      component: (
         <StartingStepInitialize
-          distance={this.getDistance(Step.INITIALIZE)}
+          distance={this.getDistance(stepId)}
           history={history}
           matchParams={matchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.INITIALIZE, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.INITIALIZE)}
-          onRestart={tab => this.handleRestartFlow(Step.INITIALIZE, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
@@ -275,23 +285,29 @@ class Progress extends React.PureComponent<Props, State> {
     const loaderMode = getLoaderMode(history.location);
     const matchParams = loaderMode.mode === 'workspace' ? loaderMode.workspaceParams : undefined;
 
-    return [
-      {
-        id: Step.LIMIT_CHECK,
+    const getCheckRunningWorkspaces = () => {
+      const stepId = Step.CONFLICT_CHECK;
+      console.debug('>>> this.getDistance(CONFLICT_CHECK)', this.getDistance(stepId));
+      return {
+        id: stepId,
         name: (
+          <StepName stepId={stepId} defaultName={CommonStepCheckRunningWorkspacesLimit.stepName} />
+        ),
+        component: (
           <CommonStepCheckRunningWorkspacesLimit
-            distance={this.getDistance(Step.LIMIT_CHECK)}
+            distance={this.getDistance(stepId)}
             history={history}
             matchParams={matchParams}
-            onError={alertItem => this.handleShowStepAlert(Step.LIMIT_CHECK, alertItem)}
+            onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
             onHideError={key => this.handleCloseStepAlert(key)}
-            onNextStep={() => this.handleGoToNextStep(Step.LIMIT_CHECK)}
-            onRestart={tab => this.handleRestartFlow(Step.LIMIT_CHECK, tab)}
+            onNextStep={() => this.handleGoToNextStep(stepId)}
+            onRestart={tab => this.handleRestartFlow(stepId, tab)}
+            stepId={stepId}
           />
         ),
-        component: <></>,
-      },
-    ];
+      };
+    };
+    return [getCheckRunningWorkspaces()];
   }
 
   private getCreationSteps(): PF.WizardStep[] {
@@ -299,122 +315,140 @@ class Progress extends React.PureComponent<Props, State> {
     const { factoryParams } = this.state;
 
     const usePrebuiltResources = factoryParams.useDevworkspaceResources;
-
+    const stepId = Step.CREATE;
+    console.debug('>>> this.getDistance(CREATE)', this.getDistance(stepId));
     return [
       {
-        id: Step.CREATE,
-        name: (
+        id: stepId,
+        name: <StepName stepId={stepId} defaultName={CreatingStepCreateWorkspace.stepName} />,
+        component: (
           <CreatingStepCreateWorkspace
-            distance={this.getDistance(Step.CREATE)}
+            distance={this.getDistance(stepId)}
             history={history}
             searchParams={searchParams}
-            onError={alertItem => this.handleShowStepAlert(Step.CREATE, alertItem)}
+            onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
             onHideError={key => this.handleCloseStepAlert(key)}
-            onNextStep={() => this.handleGoToNextStep(Step.CREATE)}
-            onRestart={tab => this.handleRestartFlow(Step.CREATE, tab)}
+            onNextStep={() => this.handleGoToNextStep(stepId)}
+            onRestart={tab => this.handleRestartFlow(stepId, tab)}
+            stepId={stepId}
           />
         ),
-        component: <></>,
-        steps: [
-          usePrebuiltResources ? this.getFactoryFetchResources() : this.getFactoryFetchDevfile(),
-          {
-            id: Step.CONFLICT_CHECK,
-            name: (
-              <CreatingStepCheckExistingWorkspaces
-                distance={this.getDistance(Step.CONFLICT_CHECK)}
-                history={history}
-                searchParams={searchParams}
-                onError={alertItem => this.handleShowStepAlert(Step.CONFLICT_CHECK, alertItem)}
-                onHideError={alertId => this.handleCloseStepAlert(alertId)}
-                onNextStep={() => this.handleGoToNextStep(Step.CONFLICT_CHECK)}
-                onRestart={tab => this.handleRestartFlow(Step.CONFLICT_CHECK, tab)}
-              />
-            ),
-            component: <></>,
-          },
-          usePrebuiltResources ? this.getFactoryApplyResources() : this.getFactoryApplyDevfile(),
-        ],
+        // steps: [
+        //   usePrebuiltResources ? this.getFactoryFetchResources() : this.getFactoryFetchDevfile(),
+        //   this.getCheckExistingWorkspaces(),
+        //   // usePrebuiltResources ? this.getFactoryApplyResources() : this.getFactoryApplyDevfile(),
+        // ],
       },
     ];
+  }
+
+  private getCheckExistingWorkspaces(): PF.WizardStep {
+    const { history, searchParams } = this.props;
+
+    const stepId = Step.CONFLICT_CHECK;
+    return {
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepCheckExistingWorkspaces.stepName} />,
+      component: (
+        <CreatingStepCheckExistingWorkspaces
+          distance={this.getDistance(stepId)}
+          history={history}
+          searchParams={searchParams}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
+          onHideError={alertId => this.handleCloseStepAlert(alertId)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
+        />
+      ),
+    };
   }
 
   private getFactoryFetchResources(): PF.WizardStep {
     const { history, searchParams } = this.props;
 
+    const stepId = Step.FETCH;
     return {
-      id: Step.FETCH,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepFetchResources.stepName} />,
+      component: (
         <CreatingStepFetchResources
-          distance={this.getDistance(Step.FETCH)}
+          distance={this.getDistance(stepId)}
           history={history}
           searchParams={searchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.FETCH, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.FETCH)}
-          onRestart={tab => this.handleRestartFlow(Step.FETCH, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
   private getFactoryApplyResources(): PF.WizardStep {
     const { history, searchParams } = this.props;
 
+    const stepId = Step.APPLY;
     return {
-      id: Step.APPLY,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepApplyResources.stepName} />,
+      component: (
         <CreatingStepApplyResources
-          distance={this.getDistance(Step.APPLY)}
+          distance={this.getDistance(stepId)}
           history={history}
           searchParams={searchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.APPLY, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.APPLY)}
-          onRestart={tab => this.handleRestartFlow(Step.APPLY, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
   private getFactoryFetchDevfile(): PF.WizardStep {
     const { history, searchParams } = this.props;
 
+    const stepId = Step.FETCH;
     return {
-      id: Step.FETCH,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepFetchDevfile.stepName} />,
+      component: (
         <CreatingStepFetchDevfile
-          distance={this.getDistance(Step.FETCH)}
+          distance={this.getDistance(stepId)}
           history={history}
           searchParams={searchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.FETCH, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.FETCH)}
-          onRestart={tab => this.handleRestartFlow(Step.FETCH, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
   private getFactoryApplyDevfile(): PF.WizardStep {
     const { history, searchParams } = this.props;
 
+    const stepId = Step.APPLY;
     return {
-      id: Step.APPLY,
-      name: (
+      id: stepId,
+      name: <StepName stepId={stepId} defaultName={CreatingStepApplyDevfile.stepName} />,
+      component: (
         <CreatingStepApplyDevfile
-          distance={this.getDistance(Step.APPLY)}
+          distance={this.getDistance(stepId)}
           history={history}
           searchParams={searchParams}
-          onError={alertItem => this.handleShowStepAlert(Step.APPLY, alertItem)}
+          onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
           onHideError={key => this.handleCloseStepAlert(key)}
-          onNextStep={() => this.handleGoToNextStep(Step.APPLY)}
-          onRestart={tab => this.handleRestartFlow(Step.APPLY, tab)}
+          onNextStep={() => this.handleGoToNextStep(stepId)}
+          onRestart={tab => this.handleRestartFlow(stepId, tab)}
+          stepId={stepId}
         />
       ),
-      component: <></>,
     };
   }
 
@@ -428,37 +462,47 @@ class Progress extends React.PureComponent<Props, State> {
     const conditionSteps = this.buildConditionSteps();
     const steps = conditionSteps.length > 0 ? { steps: conditionSteps } : {};
 
-    return [
-      {
-        id: Step.START,
-        name: (
+    const getWorkspaceStart = () => {
+      const stepId = Step.START;
+      return {
+        id: stepId,
+        name: <StepName stepId={stepId} defaultName={StartingStepStartWorkspace.stepName} />,
+        component: (
           <StartingStepStartWorkspace
-            distance={this.getDistance(Step.START)}
-            onError={alertItem => this.handleShowStepAlert(Step.START, alertItem)}
+            distance={this.getDistance(stepId)}
+            onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
             onHideError={key => this.handleCloseStepAlert(key)}
-            onNextStep={() => this.handleGoToNextStep(Step.START)}
-            onRestart={tab => this.handleRestartFlow(Step.START, tab)}
+            onNextStep={() => this.handleGoToNextStep(stepId)}
+            onRestart={tab => this.handleRestartFlow(stepId, tab)}
             history={history}
             matchParams={matchParams}
+            stepId={stepId}
           />
         ),
         ...steps,
-      },
-      {
-        id: Step.OPEN,
-        name: (
+      };
+    };
+    const getWorkspaceOpen = () => {
+      const stepId = Step.OPEN;
+      return {
+        id: stepId,
+        name: <StepName stepId={stepId} defaultName={StartingStepOpenWorkspace.stepName} />,
+        component: (
           <StartingStepOpenWorkspace
-            distance={this.getDistance(Step.OPEN)}
-            onError={alertItem => this.handleShowStepAlert(Step.OPEN, alertItem)}
+            distance={this.getDistance(stepId)}
+            onError={alertItem => this.handleShowStepAlert(stepId, alertItem)}
             onHideError={key => this.handleCloseStepAlert(key)}
-            onNextStep={() => this.handleGoToNextStep(Step.OPEN)}
-            onRestart={tab => this.handleRestartFlow(Step.OPEN, tab)}
+            onNextStep={() => this.handleGoToNextStep(stepId)}
+            onRestart={tab => this.handleRestartFlow(stepId, tab)}
             history={history}
             matchParams={matchParams}
+            stepId={stepId}
           />
         ),
-      },
-    ];
+      };
+    };
+
+    return [getWorkspaceStart(), getWorkspaceOpen()];
   }
 
   private buildConditionSteps(): PF.WizardStep[] {
@@ -472,9 +516,11 @@ class Progress extends React.PureComponent<Props, State> {
 
     return conditions.map(condition => {
       const stepId: ConditionStepId = `condition-${condition.type}`;
+      const defaultName = condition.message || condition.type;
       return {
         id: stepId,
-        name: (
+        name: <StepName stepId={stepId} defaultName={defaultName} />,
+        component: (
           <StartingStepWorkspaceConditions
             distance={1}
             condition={condition as ConditionType}
@@ -484,6 +530,7 @@ class Progress extends React.PureComponent<Props, State> {
             onHideError={key => this.handleCloseStepAlert(key)}
             onNextStep={() => this.handleGoToNextStep(stepId)}
             onRestart={tab => this.handleRestartFlow(stepId, tab)}
+            stepId={stepId}
           />
         ),
       };
@@ -530,9 +577,17 @@ const mapStateToProps = (state: AppState) => ({
   allWorkspaces: selectAllWorkspaces(state),
 });
 
-const connector = connect(mapStateToProps, WorkspaceStore.actionCreators, null, {
-  // forwardRef is mandatory for using `@react-mock/state` in unit tests
-  forwardRef: true,
-});
+const connector = connect(
+  mapStateToProps,
+  {
+    ...WorkspaceStore.actionCreators,
+    ...storeWorkspaceProgress.actionCreators,
+  },
+  null,
+  {
+    // forwardRef is mandatory for using `@react-mock/state` in unit tests
+    forwardRef: true,
+  },
+);
 type MappedProps = ConnectedProps<typeof connector>;
 export default connector(Progress);

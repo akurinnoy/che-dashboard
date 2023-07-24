@@ -23,11 +23,11 @@ import { AlertItem, DevWorkspaceStatus, LoaderTab } from '../../../../services/h
 import { Workspace } from '../../../../services/workspace-adapter';
 import { AppState } from '../../../../store';
 import { selectStartTimeout } from '../../../../store/ServerConfig/selectors';
+import { storeWorkspaceProgress } from '../../../../store/WorkspaceProgress';
 import * as WorkspaceStore from '../../../../store/Workspaces';
 import { selectAllWorkspaces } from '../../../../store/Workspaces/selectors';
 import { MIN_STEP_DURATION_MS } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
-import { ProgressStepTitle } from '../../StepTitle';
 import { TimeLimit } from '../../TimeLimit';
 import workspaceStatusIs from '../../workspaceStatusIs';
 
@@ -40,7 +40,8 @@ export type State = ProgressStepState & {
 };
 
 class StartingStepStartWorkspace extends ProgressStep<Props, State> {
-  protected readonly name = 'Waiting for workspace to start';
+  static readonly stepName = 'Waiting for workspace to start';
+
   protected readonly toDispose = new DisposableCollection();
 
   constructor(props: Props) {
@@ -48,16 +49,35 @@ class StartingStepStartWorkspace extends ProgressStep<Props, State> {
 
     this.state = {
       shouldStart: true,
-      name: this.name,
+      name: StartingStepStartWorkspace.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.init();
   }
 
-  public async componentDidUpdate() {
+  public async componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -183,7 +203,7 @@ class StartingStepStartWorkspace extends ProgressStep<Props, State> {
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
     return {
       key,
       title: 'Failed to open the workspace',
@@ -204,12 +224,8 @@ class StartingStepStartWorkspace extends ProgressStep<Props, State> {
 
   render(): React.ReactNode {
     const { distance, startTimeout } = this.props;
-    const { name, lastError } = this.state;
 
     const isActive = distance === 0;
-    const isError = lastError !== undefined;
-    const isWarning = false;
-
     const workspace = this.findTargetWorkspace(this.props);
 
     return (
@@ -217,9 +233,6 @@ class StartingStepStartWorkspace extends ProgressStep<Props, State> {
         {isActive && (
           <TimeLimit timeLimitSec={startTimeout} onTimeout={() => this.handleTimeout(workspace)} />
         )}
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
       </React.Fragment>
     );
   }
@@ -230,9 +243,14 @@ const mapStateToProps = (state: AppState) => ({
   startTimeout: selectStartTimeout(state),
 });
 
-const connector = connect(mapStateToProps, WorkspaceStore.actionCreators, null, {
-  // forwardRef is mandatory for using `@react-mock/state` in unit tests
-  forwardRef: true,
-});
+const connector = connect(
+  mapStateToProps,
+  { ...WorkspaceStore.actionCreators, ...storeWorkspaceProgress.actionCreators },
+  null,
+  {
+    // forwardRef is mandatory for using `@react-mock/state` in unit tests
+    forwardRef: true,
+  },
+);
 type MappedProps = ConnectedProps<typeof connector>;
 export default connector(StartingStepStartWorkspace);

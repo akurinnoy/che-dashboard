@@ -40,11 +40,11 @@ import { selectAllWorkspaces } from '../../../../../store/Workspaces/selectors';
 import ExpandableWarning from '../../../../ExpandableWarning';
 import { MIN_STEP_DURATION_MS, TIMEOUT_TO_CREATE_SEC } from '../../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../../ProgressStep';
-import { ProgressStepTitle } from '../../../StepTitle';
 import { TimeLimit } from '../../../TimeLimit';
 import { configureProjectRemotes } from './getGitRemotes';
 import { getProjectFromLocation } from './getProjectFromLocation';
 import { prepareDevfile } from './prepareDevfile';
+import { storeWorkspaceProgress } from '../../../../../store/WorkspaceProgress';
 
 export class CreateWorkspaceError extends Error {
   constructor(message: string) {
@@ -67,25 +67,46 @@ export type State = ProgressStepState & {
 };
 
 class CreatingStepApplyDevfile extends ProgressStep<Props, State> {
-  protected readonly name = 'Applying devfile';
+  static readonly stepName = 'Applying devfile';
+
   protected readonly toDispose = new DisposableCollection();
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> ApplyDevfile, constructor');
 
     this.state = {
       factoryParams: buildFactoryParams(props.searchParams),
       shouldCreate: true,
-      name: this.name,
+      name: CreatingStepApplyDevfile.stepName,
     };
+
+    this.props.updateStep({
+      id: this.props.stepId,
+      distance: this.props.distance,
+      name: this.state.name,
+    });
   }
 
   public componentDidMount() {
     this.init();
   }
 
-  public componentDidUpdate() {
+  public componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -356,7 +377,7 @@ class CreatingStepApplyDevfile extends ProgressStep<Props, State> {
   }
 
   protected buildAlertItem(error: Error): AlertItem {
-    const key = this.name;
+    const key = this.props.stepId;
 
     if (error instanceof CreateWorkspaceError) {
       return {
@@ -399,20 +420,14 @@ class CreatingStepApplyDevfile extends ProgressStep<Props, State> {
 
   render(): React.ReactElement {
     const { distance } = this.props;
-    const { name, lastError, warning } = this.state;
 
     const isActive = distance === 0;
-    const isError = lastError !== undefined;
-    const isWarning = warning !== undefined;
 
     return (
       <React.Fragment>
         {isActive && (
           <TimeLimit timeLimitSec={TIMEOUT_TO_CREATE_SEC} onTimeout={() => this.handleTimeout()} />
         )}
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
       </React.Fragment>
     );
   }
@@ -431,6 +446,7 @@ const connector = connect(
   mapStateToProps,
   {
     ...WorkspacesStore.actionCreators,
+    ...storeWorkspaceProgress.actionCreators,
   },
   null,
   {

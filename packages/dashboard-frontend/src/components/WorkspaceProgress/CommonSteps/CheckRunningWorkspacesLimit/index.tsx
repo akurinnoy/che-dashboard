@@ -25,6 +25,7 @@ import { AlertItem, DevWorkspaceStatus, LoaderTab } from '../../../../services/h
 import { Workspace } from '../../../../services/workspace-adapter';
 import { AppState } from '../../../../store';
 import { selectRunningWorkspacesLimit } from '../../../../store/ClusterConfig/selectors';
+import { storeWorkspaceProgress } from '../../../../store/WorkspaceProgress';
 import * as WorkspaceStore from '../../../../store/Workspaces';
 import { RunningWorkspacesExceededError } from '../../../../store/Workspaces/devWorkspaces';
 import { throwRunningWorkspacesExceededError } from '../../../../store/Workspaces/devWorkspaces/checkRunningWorkspacesLimit';
@@ -35,7 +36,6 @@ import {
 } from '../../../../store/Workspaces/selectors';
 import { MIN_STEP_DURATION_MS, TIMEOUT_TO_STOP_SEC } from '../../const';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
-import { ProgressStepTitle } from '../../StepTitle';
 import { TimeLimit } from '../../TimeLimit';
 import workspaceStatusIs from '../../workspaceStatusIs';
 
@@ -49,7 +49,8 @@ export type State = ProgressStepState & {
 };
 
 class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
-  protected readonly name = 'Checking for the limit of running workspaces';
+  static readonly stepName = 'Checking for the limit of running workspaces';
+
   static contextType = ToggleBarsContext;
   readonly context: React.ContextType<typeof ToggleBarsContext>;
 
@@ -57,10 +58,11 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
 
   constructor(props: Props) {
     super(props);
+    console.log('>>> CommonStep, constructor');
 
     this.state = {
       shouldStop: false,
-      name: this.name,
+      name: CommonStepCheckRunningWorkspacesLimit.stepName,
     };
   }
 
@@ -68,8 +70,21 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
     this.init();
   }
 
-  public async componentDidUpdate() {
+  public async componentDidUpdate(prevProps: Props, prevState: State) {
     this.toDispose.dispose();
+
+    if (
+      this.props.distance !== prevProps.distance ||
+      this.state.lastError !== prevState.lastError ||
+      this.state.name !== prevState.name
+    ) {
+      this.props.updateStep({
+        id: this.props.stepId,
+        distance: this.props.distance,
+        isError: this.state.lastError !== undefined,
+        name: this.state.name,
+      });
+    }
 
     this.init();
   }
@@ -197,7 +212,7 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
     if (name.endsWith(text)) {
       return;
     }
-    const newName = this.name + text;
+    const newName = CommonStepCheckRunningWorkspacesLimit.stepName + text;
     this.setState({
       name: newName,
     });
@@ -266,7 +281,7 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
 
   protected buildAlertItem(error: Error): AlertItem {
     const { runningWorkspaces } = this.props;
-    const key = this.name;
+    const key = this.props.stepId;
 
     if (error instanceof RunningWorkspacesExceededError) {
       const runningWorkspacesAlertItem: AlertItem = {
@@ -319,13 +334,9 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
 
   render(): React.ReactNode {
     const { distance } = this.props;
-    const { name, lastError } = this.state;
 
     const redundantWorkspace = this.findRedundantWorkspace(this.props, this.state);
-
     const isActive = distance === 0;
-    const isError = lastError !== undefined;
-    const isWarning = false;
 
     return (
       <React.Fragment>
@@ -335,9 +346,6 @@ class CommonStepCheckRunningWorkspacesLimit extends ProgressStep<Props, State> {
             onTimeout={() => this.handleTimeout(redundantWorkspace)}
           />
         )}
-        <ProgressStepTitle distance={distance} isError={isError} isWarning={isWarning}>
-          {name}
-        </ProgressStepTitle>
       </React.Fragment>
     );
   }
@@ -350,9 +358,14 @@ const mapStateToProps = (state: AppState) => ({
   runningWorkspacesLimit: selectRunningWorkspacesLimit(state),
 });
 
-const connector = connect(mapStateToProps, WorkspaceStore.actionCreators, null, {
-  // forwardRef is mandatory for using `@react-mock/state` in unit tests
-  forwardRef: true,
-});
+const connector = connect(
+  mapStateToProps,
+  { ...WorkspaceStore.actionCreators, ...storeWorkspaceProgress.actionCreators },
+  null,
+  {
+    // forwardRef is mandatory for using `@react-mock/state` in unit tests
+    forwardRef: true,
+  },
+);
 type MappedProps = ConnectedProps<typeof connector>;
 export default connector(CommonStepCheckRunningWorkspacesLimit);

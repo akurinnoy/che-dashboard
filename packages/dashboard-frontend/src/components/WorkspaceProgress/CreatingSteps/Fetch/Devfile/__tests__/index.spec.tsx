@@ -19,19 +19,20 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import CreatingStepFetchDevfile from '..';
-import ExpandableWarning from '../../../../../ExpandableWarning';
+import { Step } from '../../../..';
+import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import devfileApi from '../../../../../../services/devfileApi';
+import { getDefer } from '../../../../../../services/helpers/deferred';
 import {
   FACTORY_URL_ATTR,
   OVERRIDE_ATTR_PREFIX,
   REMOTES_ATTR,
 } from '../../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { getDefer } from '../../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { AppThunk } from '../../../../../../store';
 import { ActionCreators, OAuthResponse } from '../../../../../../store/FactoryResolver';
 import { FakeStoreBuilder } from '../../../../../../store/__mocks__/storeBuilder';
+import ExpandableWarning from '../../../../../ExpandableWarning';
 import { MIN_STEP_DURATION_MS, TIMEOUT_TO_RESOLVE_SEC } from '../../../../const';
 
 jest.mock('../../../../TimeLimit');
@@ -60,6 +61,8 @@ const mockOnError = jest.fn();
 const mockOnHideError = jest.fn();
 
 const factoryUrl = 'https://factory-url';
+
+const stepId = Step.FETCH;
 
 describe('Creating steps, fetching a devfile', () => {
   let searchParams: URLSearchParams;
@@ -657,6 +660,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
         distance={0}
         history={history}
         searchParams={searchParams}
+        stepId={stepId}
         onNextStep={mockOnNextStep}
         onRestart={mockOnRestart}
         onError={mockOnError}

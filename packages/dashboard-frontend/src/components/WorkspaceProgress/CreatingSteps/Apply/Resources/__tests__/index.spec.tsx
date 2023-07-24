@@ -12,21 +12,22 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryHistory, MemoryHistory } from 'history';
+import { MemoryHistory, createMemoryHistory } from 'history';
 import React from 'react';
 import { Provider } from 'react-redux';
 import { Action, Store } from 'redux';
 import CreatingStepApplyResources from '..';
+import { Step } from '../../../..';
 import { ROUTE } from '../../../../../../Routes/routes';
+import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import devfileApi from '../../../../../../services/devfileApi';
+import { getDefer } from '../../../../../../services/helpers/deferred';
 import {
   DEV_WORKSPACE_ATTR,
   FACTORY_URL_ATTR,
   POLICIES_CREATE_ATTR,
 } from '../../../../../../services/helpers/factoryFlow/buildFactoryParams';
-import { getDefer } from '../../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../../services/helpers/types';
-import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
 import { AppThunk } from '../../../../../../store';
 import { DevWorkspaceResources } from '../../../../../../store/DevfileRegistries';
 import { ActionCreators } from '../../../../../../store/Workspaces/devWorkspaces';
@@ -71,6 +72,8 @@ const resources = [
   } as devfileApi.DevWorkspace,
   {},
 ] as DevWorkspaceResources;
+
+const stepId = Step.APPLY;
 
 describe('Creating steps, applying resources', () => {
   let searchParams: URLSearchParams;
@@ -378,6 +381,7 @@ function getComponent(store: Store, searchParams: URLSearchParams): React.ReactE
     <CreatingStepApplyResources
       distance={0}
       searchParams={searchParams}
+      stepId={stepId}
       history={history}
       onNextStep={mockOnNextStep}
       onRestart={mockOnRestart}
