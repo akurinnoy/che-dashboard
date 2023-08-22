@@ -20,7 +20,7 @@ import {
   ERROR_CODE_ATTR,
   FACTORY_URL_ATTR,
   POLICIES_CREATE_ATTR,
-} from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
+} from '../../../../../services/helpers/factoryFlow/const';
 import { AlertItem } from '../../../../../services/helpers/types';
 import getComponentRenderer, {
   waitFor,

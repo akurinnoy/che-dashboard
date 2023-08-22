@@ -15,7 +15,7 @@ import { dump } from 'js-yaml';
 import { Action, Reducer } from 'redux';
 import { AppThunk } from '../..';
 import { container } from '../../../inversify.config';
-import { FactoryParams } from '../../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../../services/helpers/factoryFlow/const';
 import {
   injectKubeConfig,
   podmanLogin,

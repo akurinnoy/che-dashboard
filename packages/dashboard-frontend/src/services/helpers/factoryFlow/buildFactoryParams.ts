@@ -10,45 +10,21 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-export const DEV_WORKSPACE_ATTR = 'devWorkspace';
-export const EDITOR_ATTR = 'che-editor';
-export const ERROR_CODE_ATTR = 'error_code';
-export const FACTORY_URL_ATTR = 'url';
-export const POLICIES_CREATE_ATTR = 'policies.create';
-export const STORAGE_TYPE_ATTR = 'storageType';
-export const REMOTES_ATTR = 'remotes';
-export const IMAGE_ATTR = 'image';
-export const PROPAGATE_FACTORY_ATTRS = [
-  'workspaceDeploymentAnnotations',
-  'workspaceDeploymentLabels',
+import {
+  FactoryParams,
   DEV_WORKSPACE_ATTR,
-  EDITOR_ATTR,
   FACTORY_URL_ATTR,
+  PoliciesCreate,
   POLICIES_CREATE_ATTR,
+  DEFAULT_POLICIES_CREATE,
   STORAGE_TYPE_ATTR,
+  EDITOR_ATTR,
+  ErrorCode,
+  ERROR_CODE_ATTR,
   REMOTES_ATTR,
+  OVERRIDE_ATTR_PREFIX,
   IMAGE_ATTR,
-];
-export const OVERRIDE_ATTR_PREFIX = 'override.';
-export const DEFAULT_POLICIES_CREATE = 'peruser';
-
-export type FactoryParams = {
-  factoryId: string;
-  factoryUrl: string;
-  policiesCreate: PoliciesCreate;
-  sourceUrl: string;
-  useDevworkspaceResources: boolean;
-  overrides: Record<string, string> | undefined;
-  errorCode: ErrorCode | undefined;
-  storageType: che.WorkspaceStorageType | undefined;
-  cheEditor: string | undefined;
-  remotes: string | undefined;
-  image: string | undefined;
-};
-
-export type PoliciesCreate = 'perclick' | 'peruser';
-
-export type ErrorCode = 'invalid_request' | 'access_denied';
+} from './const';
 
 export function buildFactoryParams(searchParams: URLSearchParams): FactoryParams {
   return {

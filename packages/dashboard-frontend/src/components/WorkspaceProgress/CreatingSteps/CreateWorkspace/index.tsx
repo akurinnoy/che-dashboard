@@ -11,10 +11,8 @@
  */
 
 import React from 'react';
-import {
-  buildFactoryParams,
-  FactoryParams,
-} from '../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryParams } from '../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../../../services/helpers/factoryFlow/const';
 import { AlertItem } from '../../../../services/helpers/types';
 import { ProgressStep, ProgressStepProps, ProgressStepState } from '../../ProgressStep';
 import { ProgressStepTitle } from '../../StepTitle';

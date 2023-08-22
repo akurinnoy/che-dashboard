@@ -33,6 +33,7 @@ class LoaderContainer extends React.Component<Props, State> {
     super(props);
 
     const { location: dirtyLocation } = this.props.history;
+    console.debug('>>> location', JSON.parse(JSON.stringify(dirtyLocation)));
     const { search } = sanitizeLocation(dirtyLocation);
     const searchParams = new URLSearchParams(search);
     const tabParam = searchParams.get('tab') || undefined;

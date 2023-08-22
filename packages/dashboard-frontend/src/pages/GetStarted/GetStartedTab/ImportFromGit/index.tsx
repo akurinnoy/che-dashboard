@@ -45,6 +45,9 @@ export class ImportFromGit extends React.PureComponent<Props, State> {
 
   private async handleLocationChange(location: string): Promise<void> {
     const factory = new FactoryLocationAdapter(location);
+    console.debug('>>> factory.toString()', factory.toString());
+    // eslint-disable-next-line no-debugger
+    debugger;
     // open a new page to handle that
     window.open(`${window.location.origin}/#${factory.toString()}`, '_blank');
   }

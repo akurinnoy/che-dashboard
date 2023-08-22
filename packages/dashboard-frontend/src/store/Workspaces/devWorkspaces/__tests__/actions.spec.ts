@@ -21,7 +21,7 @@ import { ThunkDispatch } from 'redux-thunk';
 import * as testStore from '..';
 import { AppState } from '../../..';
 import { container } from '../../../../inversify.config';
-import { FactoryParams } from '../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../../../services/helpers/factoryFlow/const';
 import { fetchServerConfig } from '../../../../services/dashboard-backend-client/serverConfigApi';
 import { WebsocketClient } from '../../../../services/dashboard-backend-client/websocketClient';
 import devfileApi from '../../../../services/devfileApi';

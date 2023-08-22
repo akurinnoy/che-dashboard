@@ -11,14 +11,13 @@
  */
 
 import { FactoryLocation, FactoryLocationAdapter } from '../services/factory-location-adapter';
-import {
-  PROPAGATE_FACTORY_ATTRS,
-  REMOTES_ATTR,
-} from '../services/helpers/factoryFlow/buildFactoryParams';
+import { REMOTES_ATTR, PROPAGATE_FACTORY_ATTRS } from '../services/helpers/factoryFlow/const';
 import { sanitizeLocation } from '../services/helpers/location';
 import SessionStorageService, { SessionStorageKey } from '../services/session-storage';
 
 (function acceptNewFactoryLink(): void {
+  // eslint-disable-next-line no-debugger
+  debugger;
   if (window.location.pathname.startsWith('/dashboard/')) {
     return;
   }
@@ -26,7 +25,7 @@ import SessionStorageService, { SessionStorageKey } from '../services/session-st
   storePathIfNeeded(window.location.pathname);
 
   const hash = window.location.hash.replace(/(\/?)#(\/?)/, '');
-  if (FactoryLocationAdapter.isFullPathUrl(hash) || FactoryLocationAdapter.isSshLocation(hash)) {
+  if (FactoryLocationAdapter.isHttpLocation(hash) || FactoryLocationAdapter.isSshLocation(hash)) {
     window.location.href = window.location.origin + '/dashboard' + buildFactoryLoaderPath(hash);
   } else if (
     window.location.search.startsWith(`?${REMOTES_ATTR}=`) ||

@@ -15,11 +15,10 @@ import { AlertVariant } from '@patternfly/react-core';
 import { isEqual } from 'lodash';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import {
-  buildFactoryParams,
-  FactoryParams,
-} from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
 import { getEnvironment, isDevEnvironment } from '../../../../../services/helpers/environment';
+import { buildFactoryParams } from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryUrl } from '../../../../../services/helpers/factoryFlow/buildFactoryUrl';
+import { FactoryParams } from '../../../../../services/helpers/factoryFlow/const';
 import { AlertItem } from '../../../../../services/helpers/types';
 import OAuthService, { isOAuthResponse } from '../../../../../services/oauth';
 import SessionStorageService, { SessionStorageKey } from '../../../../../services/session-storage';
@@ -230,12 +229,16 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
    */
   private async resolveDevfile(factoryUrl: string): Promise<boolean> {
     const { factoryParams } = this.state;
+    console.log('>>> factoryUrl', factoryUrl);
+    console.log('>>> factoryParams', factoryParams);
 
     try {
       await this.props.requestFactoryResolver(factoryUrl, factoryParams);
       this.clearNumberOfTries();
       return true;
     } catch (e) {
+      // eslint-disable-next-line no-debugger
+      debugger;
       if (isOAuthResponse(e)) {
         this.checkNumberOfTries(factoryUrl);
         this.increaseNumberOfTries(factoryUrl);
@@ -245,10 +248,25 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
         // build redirect URL
         let redirectHost = window.location.protocol + '//' + window.location.host;
         if (isDevEnvironment(env)) {
-          redirectHost = env.server;
+          redirectHost = env.server || redirectHost;
         }
-        const redirectUrl = new URL('/f', redirectHost);
-        redirectUrl.searchParams.set('url', factoryUrl);
+
+        const { pathname, search } = this.props.history.location;
+        const _factoryUrl =
+          new URLSearchParams(this.props.history.location.search).get('url') || factoryUrl;
+        // const _factoryUrl = new URL(pathname, redirectHost);
+        // _factoryUrl.search = new URLSearchParams(search).toString();
+
+        // const redirectUrl = new URL('/f', redirectHost);
+        // redirectUrl.searchParams.set('url', _factoryUrl);
+        // console.info('>>> redirectUrl.toString()', redirectUrl.toString());
+
+        // const redirectUrl = buildFactoryLoaderPath(window.location.toString(), false);
+        const redirectUrl = redirectHost + buildFactoryUrl(factoryParams);
+        console.debug('>>> redirectUrl', redirectUrl);
+        // eslint-disable-next-line no-debugger
+        debugger;
+
         OAuthService.openOAuthPage(e.attributes.oauth_authentication_url, redirectUrl.toString());
         return false;
       }

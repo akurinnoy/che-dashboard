@@ -15,10 +15,8 @@ import { History } from 'history';
 import isEqual from 'lodash/isEqual';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import {
-  buildFactoryParams,
-  FactoryParams,
-} from '../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryParams } from '../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../services/helpers/factoryFlow/const';
 import { findTargetWorkspace } from '../../services/helpers/factoryFlow/findTargetWorkspace';
 import { getLoaderMode, LoaderMode } from '../../services/helpers/factoryFlow/getLoaderMode';
 import { AlertItem, DevWorkspaceStatus, LoaderTab } from '../../services/helpers/types';

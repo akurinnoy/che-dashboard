@@ -15,10 +15,8 @@ import { AlertVariant } from '@patternfly/react-core';
 import { isEqual } from 'lodash';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import {
-  buildFactoryParams,
-  FactoryParams,
-} from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryParams } from '../../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../../../../services/helpers/factoryFlow/const';
 import { AlertItem } from '../../../../../services/helpers/types';
 import { AppState } from '../../../../../store';
 import * as DevfileRegistriesStore from '../../../../../store/DevfileRegistries';

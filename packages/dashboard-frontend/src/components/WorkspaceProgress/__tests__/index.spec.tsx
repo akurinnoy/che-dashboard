@@ -19,11 +19,8 @@ import { Store } from 'redux';
 import Progress, { State, Step } from '..';
 import { ROUTE } from '../../../Routes/routes';
 import devfileApi from '../../../services/devfileApi';
-import {
-  buildFactoryParams,
-  DEV_WORKSPACE_ATTR,
-  FACTORY_URL_ATTR,
-} from '../../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryParams } from '../../../services/helpers/factoryFlow/buildFactoryParams';
+import { DEV_WORKSPACE_ATTR, FACTORY_URL_ATTR } from '../../../services/helpers/factoryFlow/const';
 import { buildIdeLoaderLocation } from '../../../services/helpers/location';
 import { constructWorkspace } from '../../../services/workspace-adapter';
 import getComponentRenderer, {

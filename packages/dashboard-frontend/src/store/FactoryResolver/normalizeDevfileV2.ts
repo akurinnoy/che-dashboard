@@ -13,7 +13,7 @@
 import { V221DevfileComponents } from '@devfile/api';
 import { dump } from 'js-yaml';
 import { cloneDeep } from 'lodash';
-import { FactoryParams } from '../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../services/helpers/factoryFlow/const';
 import { DevfileAdapter } from '../../services/devfile/adapter';
 import devfileApi from '../../services/devfileApi';
 import { generateWorkspaceName } from '../../services/helpers/generateName';

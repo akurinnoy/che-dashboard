@@ -17,11 +17,8 @@ import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import { generatePath } from 'react-router-dom';
 import { ROUTE } from '../../../../Routes/routes';
-import {
-  buildFactoryParams,
-  FactoryParams,
-  PoliciesCreate,
-} from '../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { buildFactoryParams } from '../../../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams, PoliciesCreate } from '../../../../services/helpers/factoryFlow/const';
 import { AlertItem } from '../../../../services/helpers/types';
 import { AppState } from '../../../../store';
 import { selectAllWorkspacesLimit } from '../../../../store/ClusterConfig/selectors';

@@ -12,7 +12,7 @@
 
 import { Reducer } from 'redux';
 import { AppThunk } from '..';
-import { FactoryParams } from '../../services/helpers/factoryFlow/buildFactoryParams';
+import { FactoryParams } from '../../services/helpers/factoryFlow/const';
 import devfileApi from '../../services/devfileApi';
 import { Workspace } from '../../services/workspace-adapter';
 import { createObject } from '../helpers';

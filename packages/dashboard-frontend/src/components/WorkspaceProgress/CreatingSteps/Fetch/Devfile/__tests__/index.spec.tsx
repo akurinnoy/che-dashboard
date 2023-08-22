@@ -25,7 +25,7 @@ import {
   FACTORY_URL_ATTR,
   OVERRIDE_ATTR_PREFIX,
   REMOTES_ATTR,
-} from '../../../../../../services/helpers/factoryFlow/buildFactoryParams';
+} from '../../../../../../services/helpers/factoryFlow/const';
 import { getDefer } from '../../../../../../services/helpers/deferred';
 import { AlertItem } from '../../../../../../services/helpers/types';
 import getComponentRenderer from '../../../../../../services/__mocks__/getComponentRenderer';
