@@ -4,13 +4,16 @@ metadata:
   name: che-dashboard
 build:
   tagPolicy:
-    sha256: {}
+    # sha256: {}
+    # customTemplate:
+    #   template: "skaffold"
+    inputDigest: {}
   artifacts:
     - image: che-dashboard
       context: .
       custom:
         buildCommand: |
-          scripts/container_tool.sh build  --tag=$IMAGE -f build/dockerfiles/skaffold.Dockerfile . && scripts/container_tool.sh push $IMAGE
+          scripts/container_tool.sh build --tag=$IMAGE -f build/dockerfiles/skaffold.Dockerfile . && scripts/container_tool.sh push $IMAGE
         dependencies:
           paths:
             - packages/*/lib/*

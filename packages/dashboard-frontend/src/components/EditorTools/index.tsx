@@ -10,21 +10,32 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
+import { ApplicationId, helpers } from '@eclipse-che/common';
 import { AlertVariant, Button, Divider, Flex, FlexItem } from '@patternfly/react-core';
-import { CompressIcon, CopyIcon, DownloadIcon, ExpandIcon } from '@patternfly/react-icons';
+import {
+  CompressIcon,
+  CopyIcon,
+  DownloadIcon,
+  ExpandIcon,
+  ExternalLinkAltIcon,
+} from '@patternfly/react-icons';
 import React from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
-import stringify from '../../services/helpers/editor';
-import styles from './index.module.css';
-import devfileApi from '../../services/devfileApi';
-import { AppAlerts } from '../../services/alerts/appAlerts';
-import { lazyInject } from '../../inversify.config';
-import { AlertItem } from '../../services/helpers/types';
-import { helpers } from '@eclipse-che/common';
+import { ConnectedProps, connect } from 'react-redux';
 import { ToggleBarsContext } from '../../contexts/ToggleBars';
+import { lazyInject } from '../../inversify.config';
+import { AppAlerts } from '../../services/alerts/appAlerts';
+import devfileApi, { isDevWorkspace, isDevfileV2 } from '../../services/devfileApi';
+import stringify from '../../services/helpers/editor';
+import { AlertItem } from '../../services/helpers/types';
+import { AppState } from '../../store';
+import { actionCreators } from '../../store/BannerAlert';
+import { selectApplications } from '../../store/ClusterInfo/selectors';
+import styles from './index.module.css';
+import { selectDefaultNamespace } from '../../store/InfrastructureNamespaces/selectors';
 
-type Props = {
-  content: devfileApi.DevWorkspace | devfileApi.Devfile;
+type Props = MappedProps & {
+  devfileOrDevWorkspace: devfileApi.DevWorkspace | devfileApi.Devfile;
   handleExpand: (isExpand: boolean) => void;
 };
 
@@ -32,7 +43,6 @@ type State = {
   copied?: boolean;
   isExpanded: boolean;
   contentText: string;
-  isWorkspace: boolean;
   contentBlobUrl: string;
 };
 
@@ -47,24 +57,23 @@ class EditorTools extends React.PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props);
+    // trigger build
 
     this.state = {
       isExpanded: false,
       contentText: '',
-      isWorkspace: false,
       contentBlobUrl: '',
     };
   }
 
   public componentDidMount(): void {
-    const { content } = this.props;
+    const { devfileOrDevWorkspace } = this.props;
     try {
-      const contentText = stringify(content);
-      const isWorkspace = this.isWorkspace(content);
+      const contentText = stringify(devfileOrDevWorkspace);
       const contentBlobUrl = URL.createObjectURL(
         new Blob([contentText], { type: 'application/x-yaml' }),
       );
-      this.setState({ contentText, isWorkspace, contentBlobUrl });
+      this.setState({ contentText, contentBlobUrl });
     } catch (e) {
       this.showAlert({
         key: 'editor-tools-create blob-url-fails',
@@ -75,15 +84,14 @@ class EditorTools extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate(): void {
-    const { content } = this.props;
+    const { devfileOrDevWorkspace: content } = this.props;
     try {
       const contentText = stringify(content);
       if (contentText !== this.state.contentText) {
-        const isWorkspace = this.isWorkspace(content);
         const contentBlobUrl = URL.createObjectURL(
           new Blob([contentText], { type: 'application/x-yaml' }),
         );
-        this.setState({ contentText, isWorkspace, contentBlobUrl });
+        this.setState({ contentText, contentBlobUrl });
       }
     } catch (e) {
       this.showAlert({
@@ -113,19 +121,11 @@ class EditorTools extends React.PureComponent<Props, State> {
   }
 
   private getName(content: devfileApi.DevWorkspace | devfileApi.Devfile): string | undefined {
-    if ((content as devfileApi.DevWorkspace)?.kind === 'DevWorkspace') {
-      return (content as devfileApi.DevWorkspace).metadata.name;
+    if (isDevWorkspace(content)) {
+      return content.metadata.name;
     } else {
-      return (content as devfileApi.Devfile).metadata.name;
+      return content.metadata.name;
     }
-    return undefined;
-  }
-
-  private isWorkspace(content: devfileApi.DevWorkspace | devfileApi.Devfile): boolean {
-    if ((content as devfileApi.DevWorkspace)?.kind === 'DevWorkspace') {
-      return true;
-    }
-    return false;
   }
 
   private onCopyToClipboard(): void {
@@ -138,13 +138,43 @@ class EditorTools extends React.PureComponent<Props, State> {
     }, 3000);
   }
 
+  private buildOpenShiftConsoleItem(): React.ReactElement | undefined {
+    const { applications, devfileOrDevWorkspace, defaultNamespace } = this.props;
+    const openshiftConsole = applications.find(app => app.id === ApplicationId.CLUSTER_CONSOLE);
+
+    if (isDevfileV2(devfileOrDevWorkspace)) {
+      return;
+    }
+    const devWorkspace = devfileOrDevWorkspace;
+
+    console.debug('>>> openshiftConsole', openshiftConsole);
+    if (!openshiftConsole) {
+      return;
+    }
+
+    const part = devWorkspace.apiVersion.replace('/', '~') + '~DevWorkspace';
+    const devWorkspaceOpenShiftConsoleUrl = `${openshiftConsole.url}/k8s/ns/${defaultNamespace.name}}/${part}/${devWorkspace.metadata.name}/yaml`;
+
+    return (
+      <FlexItem>
+        <Button variant="link" href={devWorkspaceOpenShiftConsoleUrl} target="_blank">
+          OpenShift Console <ExternalLinkAltIcon />
+        </Button>
+      </FlexItem>
+    );
+  }
+
   public render(): React.ReactElement {
-    const { contentText, isWorkspace, contentBlobUrl, isExpanded, copied } = this.state;
-    const name = this.getName(this.props.content);
+    const { devfileOrDevWorkspace } = this.props;
+    const { contentText, contentBlobUrl, isExpanded, copied } = this.state;
+    const name = this.getName(this.props.devfileOrDevWorkspace);
+
+    const openshiftConsoleItem = this.buildOpenShiftConsoleItem();
 
     return (
       <div className={styles.editorTools}>
         <Flex>
+          {openshiftConsoleItem}
           <FlexItem>
             <CopyToClipboard text={contentText} onCopy={() => this.onCopyToClipboard()}>
               <Button variant="link">
@@ -156,7 +186,9 @@ class EditorTools extends React.PureComponent<Props, State> {
           <Divider isVertical />
           <FlexItem>
             <a
-              download={`${name}.${isWorkspace ? 'workspace' : 'devfile'}.yaml`}
+              download={`${name}.${
+                isDevWorkspace(devfileOrDevWorkspace) ? 'workspace' : 'devfile'
+              }.yaml`}
               href={contentBlobUrl}
             >
               <DownloadIcon />
@@ -185,4 +217,13 @@ class EditorTools extends React.PureComponent<Props, State> {
   }
 }
 
-export default EditorTools;
+const mapStateToProps = (state: AppState) => ({
+  applications: selectApplications(state),
+  defaultNamespace: selectDefaultNamespace(state),
+});
+
+const connector = connect(mapStateToProps, actionCreators);
+
+type MappedProps = ConnectedProps<typeof connector>;
+
+export default connector(EditorTools);

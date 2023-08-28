@@ -101,6 +101,18 @@ export class WorkspaceAdapter<T extends devfileApi.DevWorkspace> implements Work
     return workspace.status.phase as DevWorkspaceStatus;
   }
 
+  static buildOpenshiftConsoleUrl(
+    workspace: devfileApi.DevWorkspace,
+    openshiftConsoleUrl: string,
+  ): string {
+    // <openshift-console-url>/k8s/ns/<user-namespace>/<apiVersion-sanitized>/<workspaceName>
+    const openshiftConsoleUrlParts = openshiftConsoleUrl.split('/');
+    const apiVersion = workspace.apiVersion.split('/')[1];
+    const workspaceName = workspace.metadata.name;
+    const userNamespace = workspace.metadata.namespace;
+    return `${openshiftConsoleUrlParts[0]}//${openshiftConsoleUrlParts[2]}/k8s/ns/${userNamespace}/${apiVersion}/${workspaceName}`;
+  }
+
   get ref(): T {
     return this.workspace;
   }
