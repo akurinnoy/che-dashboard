@@ -17,7 +17,7 @@
 		}
 	],
 	"settings": {
-		"typescript.tsdk": "node_modules/typescript/lib",
+		"typescript.tsdk": "che-dashboard/node_modules/typescript/lib",
 		"jest.disabledWorkspaceFolders": [
 			"che-dashboard",
 		]

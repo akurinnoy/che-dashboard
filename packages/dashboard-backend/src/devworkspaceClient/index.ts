@@ -15,14 +15,14 @@ import { DevWorkspaceApiService } from './services/devWorkspaceApi';
 import { DevWorkspaceTemplateApiService } from './services/devWorkspaceTemplateApi';
 import { DockerConfigApiService } from './services/dockerConfigApi';
 import { EventApiService } from './services/eventApi';
+import { GitConfigApiService } from './services/gitConfigApi';
 import { KubeConfigApiService } from './services/kubeConfigApi';
-import { PodmanApiService } from './services/podmanApi';
 import { LogsApiService } from './services/logsApi';
 import { PersonalAccessTokenService } from './services/personalAccessTokenApi';
 import { PodApiService } from './services/podApi';
+import { PodmanApiService } from './services/podmanApi';
 import { ServerConfigApiService } from './services/serverConfigApi';
 import { UserProfileApiService } from './services/userProfileApi';
-import { IPodmanApi } from './types/index';
 import {
   IDevWorkspaceApi,
   IDevWorkspaceClient,
@@ -36,6 +36,7 @@ import {
   IServerConfigApi,
   IUserProfileApi,
 } from './types';
+import { IGitConfigApi, IPodmanApi } from './types/index';
 
 export * from './types';
 
@@ -88,5 +89,9 @@ export class DevWorkspaceClient implements IDevWorkspaceClient {
 
   get personalAccessTokenApi(): IPersonalAccessTokenApi {
     return new PersonalAccessTokenService(this.kubeConfig);
+  }
+
+  get gitConfigApi(): IGitConfigApi {
+    return new GitConfigApiService(this.kubeConfig);
   }
 }
