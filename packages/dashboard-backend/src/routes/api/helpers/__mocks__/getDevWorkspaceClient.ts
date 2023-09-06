@@ -25,6 +25,7 @@ import {
   IDevWorkspaceTemplateApi,
   IDockerConfigApi,
   IEventApi,
+  IGitConfigApi,
   IKubeConfigApi,
   ILogsApi,
   IPersonalAccessTokenApi,
@@ -176,5 +177,10 @@ export function getDevWorkspaceClient(_args: Parameters<typeof helper>): ReturnT
       listInNamespace: _namespace => Promise.resolve(stubPersonalAccessTokenList),
       replace: (_namespace, _token) => Promise.resolve({} as api.PersonalAccessToken),
     } as IPersonalAccessTokenApi,
+    // todo gitConfigService
+    gitConfigApi: {
+      read: _namespace => Promise.resolve({} as api.IGitConfig),
+      patch: (_namespace, _gitconfig) => Promise.resolve({} as api.IGitConfig),
+    } as IGitConfigApi,
   } as DevWorkspaceClient;
 }
