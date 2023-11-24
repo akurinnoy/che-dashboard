@@ -152,10 +152,12 @@ jobs:
             const text = `
             Docker image build succeeded: **${dashboardImage}**
             <details>
-            <summary>**kubectl patch** command</summary>
+            <summary>kubectl patch command</summary>
+
             \`\`\`bash
             ${patchCommand}
             \`\`\`
+
             </details>
             `;
             github.rest.issues.createComment({ issue_number, owner, repo, body: text });
