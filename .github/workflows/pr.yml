@@ -121,25 +121,25 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      -
-        name: "Docker quay.io Login"
-        uses: docker/login-action@v2
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-      -
-        name: "Build and push ${{ matrix.platform }}"
-        uses: docker/build-push-action@v3
-        with:
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          context: ./${{ env.DIR_DASHBOARD }}
-          file: ./${{ env.DIR_DASHBOARD }}/build/dockerfiles/Dockerfile
-          platforms: ${{ matrix.platform }}
-          push: ${{ matrix.default == true }}
-          provenance: false
-          tags: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_VERSION }}
+      # -
+      #   name: "Docker quay.io Login"
+      #   uses: docker/login-action@v2
+      #   with:
+      #     registry: quay.io
+      #     username: ${{ secrets.QUAY_USERNAME }}
+      #     password: ${{ secrets.QUAY_PASSWORD }}
+      # -
+      #   name: "Build and push ${{ matrix.platform }}"
+      #   uses: docker/build-push-action@v3
+      #   with:
+      #     cache-from: type=local,src=/tmp/.buildx-cache
+      #     cache-to: type=local,dest=/tmp/.buildx-cache
+      #     context: ./${{ env.DIR_DASHBOARD }}
+      #     file: ./${{ env.DIR_DASHBOARD }}/build/dockerfiles/Dockerfile
+      #     platforms: ${{ matrix.platform }}
+      #     push: ${{ matrix.default == true }}
+      #     provenance: false
+      #     tags: ${{ env.ORGANIZATION }}/che-dashboard:${{ env.IMAGE_VERSION }}
       -
         name: "Comment with image name"
         uses: actions/github-script@v6
