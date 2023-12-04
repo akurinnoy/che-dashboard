@@ -14,9 +14,13 @@ import * as FactoryResolverStore from '@/store/FactoryResolver';
 
 export function buildStepName(
   sourceUrl: string,
-  factoryResolver: FactoryResolverStore.ResolverState,
-  factoryResolverConverted: FactoryResolverStore.ConvertedState,
+  factoryResolver?: FactoryResolverStore.ResolverState,
+  factoryResolverConverted?: FactoryResolverStore.ConvertedState,
 ): string {
+  if (!factoryResolver || !factoryResolverConverted) {
+    return `Devfile could not be resolved in ${sourceUrl}. Applying the default configuration.`;
+  }
+
   // source tells where devfile comes from
   //  - no source: the url to raw content is used
   //  - repo: means no devfile is found and default is generated

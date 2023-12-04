@@ -245,7 +245,9 @@ class CreatingStepApplyDevfile extends ProgressStep<Props, State> {
         }
         const _devfile = cloneDeep(defaultDevfile);
         if (!_devfile.attributes) {
-          _devfile.attributes = {};
+          _devfile.attributes = {
+            'controller.devfile.io/bootstrap-devworkspace': true,
+          };
         }
         this.updateCurrentDevfile(_devfile);
       } else {

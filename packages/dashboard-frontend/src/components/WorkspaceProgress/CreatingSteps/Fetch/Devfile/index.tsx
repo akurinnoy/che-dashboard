@@ -209,6 +209,11 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
     }
 
     if (shouldResolve === false && useDefaultDevfile) {
+      const newName = buildStepName(sourceUrl, factoryResolver, factoryResolverConverted);
+      this.setState({
+        name: newName,
+      });
+
       // go to the next step
       return true;
     }
@@ -353,7 +358,7 @@ class CreatingStepFetchDevfile extends ProgressStep<Props, State> {
           <ExpandableWarning
             textBefore="Could not find any devfile in the Git repository"
             errorMessage={helpers.errors.getMessage(error)}
-            textAfter="The Git provider is not supported."
+            textAfter="The Git provider is not configured or supported."
           />
         ),
         actionCallbacks: [
