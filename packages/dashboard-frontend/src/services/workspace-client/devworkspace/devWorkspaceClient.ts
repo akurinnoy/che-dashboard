@@ -600,46 +600,59 @@ export class DevWorkspaceClient {
         value: started,
       },
     ];
-
-    if (started) {
-      const updatingTimeAnnotationPath =
-        '/metadata/annotations/' + this.escape(DEVWORKSPACE_UPDATING_TIMESTAMP_ANNOTATION);
-      if (
-        workspace.metadata.annotations?.[DEVWORKSPACE_UPDATING_TIMESTAMP_ANNOTATION] === undefined
-      ) {
-        patch.push({
-          op: 'add',
-          path: updatingTimeAnnotationPath,
-          value: new Date().toISOString(),
-        });
-      } else {
-        patch.push({
-          op: 'replace',
-          path: updatingTimeAnnotationPath,
-          value: new Date().toISOString(),
-        });
-      }
-    }
-
-    let { devWorkspace } = await DwApi.patchWorkspace(
+    const { devWorkspace } = await DwApi.patchWorkspace(
       workspace.metadata.namespace,
       workspace.metadata.name,
       patch,
     );
-    if (!skipErrorCheck) {
-      const currentPhase = WorkspaceAdapter.getStatus(devWorkspace);
-      // Need to request DevWorkspace again to get updated Status -- we've patched spec.started
-      // but status still may contain an earlier error until DevWorkspace Operator updates it.
-      if (currentPhase === DevWorkspaceStatus.FAILED) {
-        devWorkspace = await DwApi.getWorkspaceByName(
-          devWorkspace.metadata.namespace,
-          devWorkspace.metadata.name,
-        );
-      }
-      this.checkForDevWorkspaceError(devWorkspace);
-    }
-
     return devWorkspace;
+
+    // const dw = {} as devfileApi.DevWorkspace;
+    // Object.assign(dw, workspace, {
+    //   spec: { started },
+    // } as Partial<devfileApi.DevWorkspace>);
+    // await DwApi.patchPatchWorkspace(workspace.metadata.namespace, workspace.metadata.name, dw);
+    // return workspace;
+
+    // if (started) {
+    //   const updatingTimeAnnotationPath =
+    //     '/metadata/annotations/' + this.escape(DEVWORKSPACE_UPDATING_TIMESTAMP_ANNOTATION);
+    //   if (
+    //     workspace.metadata.annotations?.[DEVWORKSPACE_UPDATING_TIMESTAMP_ANNOTATION] === undefined
+    //   ) {
+    //     patch.push({
+    //       op: 'add',
+    //       path: updatingTimeAnnotationPath,
+    //       value: new Date().toISOString(),
+    //     });
+    //   } else {
+    //     patch.push({
+    //       op: 'replace',
+    //       path: updatingTimeAnnotationPath,
+    //       value: new Date().toISOString(),
+    //     });
+    //   }
+    // }
+
+    // let { devWorkspace } = await DwApi.patchWorkspace(
+    //   workspace.metadata.namespace,
+    //   workspace.metadata.name,
+    //   patch,
+    // );
+    // if (!skipErrorCheck) {
+    //   const currentPhase = WorkspaceAdapter.getStatus(devWorkspace);
+    //   // Need to request DevWorkspace again to get updated Status -- we've patched spec.started
+    //   // but status still may contain an earlier error until DevWorkspace Operator updates it.
+    //   if (currentPhase === DevWorkspaceStatus.FAILED) {
+    //     devWorkspace = await DwApi.getWorkspaceByName(
+    //       devWorkspace.metadata.namespace,
+    //       devWorkspace.metadata.name,
+    //     );
+    //   }
+    //   this.checkForDevWorkspaceError(devWorkspace);
+    // }
+
+    // return devWorkspace;
   }
 
   /**

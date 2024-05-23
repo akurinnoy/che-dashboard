@@ -85,6 +85,25 @@ export async function patchWorkspace(
   }
 }
 
+export async function patchPatchWorkspace(
+  namespace: string,
+  workspaceName: string,
+  devWorkspace: devfileApi.DevWorkspace,
+): Promise<{ devWorkspace: devfileApi.DevWorkspace; headers: Headers }> {
+  try {
+    const response = await AxiosWrapper.createToRetryMissedBearerTokenError().patch(
+      `${dashboardBackendPrefix}/namespace/${namespace}/devworkspaces/${workspaceName}/patch`,
+      devWorkspace,
+    );
+    console.debug('>>> response.data', response.data);
+    return { devWorkspace: response.data, headers: response.headers };
+  } catch (e) {
+    throw new Error(
+      `Failed to update workspace '${workspaceName}'. ${helpers.errors.getMessage(e)}`,
+    );
+  }
+}
+
 export async function deleteWorkspace(namespace: string, workspaceName: string): Promise<void> {
   try {
     await AxiosWrapper.createToRetryMissedBearerTokenError().delete(

@@ -131,6 +131,15 @@ export const devworkspacePatchSchema: JSONSchema7 = {
   ],
 };
 
+export const devworkspacePatchPatchSchema: JSONSchema7 = {
+  type: 'object',
+  properties: {
+    devWorkspace: {
+      type: 'object',
+    },
+  },
+};
+
 export const dockerConfigSchema: JSONSchema7 = {
   type: 'object',
   properties: {

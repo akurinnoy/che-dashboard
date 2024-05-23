@@ -13,6 +13,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const CopyPlugin = require('copy-webpack-plugin');
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = () => {
   return {
@@ -81,5 +82,12 @@ module.exports = () => {
       __dirname: false,
     },
     target: 'node',
+    // externalsPresets: { node: true },
+    // externals: [nodeExternals({
+    //   // importType: 'this',
+    //   modulesDir: path.resolve(__dirname, '../../node_modules'),
+    //   additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
+    //   allowlist: [/^@devfile\/api/],
+    // })],
   };
 };

@@ -10,11 +10,13 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
+import { V1alpha2DevWorkspace } from '@devfile/api';
 import { api } from '@eclipse-che/common';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { baseApiPath } from '@/constants/config';
 import {
+  devworkspacePatchPatchSchema,
   devworkspacePatchSchema,
   devworkspaceSchema,
   namespacedSchema,
@@ -86,6 +88,26 @@ export function registerDevworkspacesRoutes(instance: FastifyInstance) {
           namespace,
           workspaceName,
           patch,
+        );
+
+        reply.headers(headers).send(devWorkspace);
+      },
+    );
+
+    server.patch(
+      `${baseApiPath}/namespace/:namespace/devworkspaces/:workspaceName/patch`,
+      getSchema({ tags, params: namespacedWorkspaceSchema, body: devworkspacePatchPatchSchema }),
+      async function (request: FastifyRequest, reply: FastifyReply) {
+        const { namespace, workspaceName } =
+          request.params as restParams.INamespacedWorkspaceParams;
+        const _devWorkspace = request.body as V1alpha2DevWorkspace;
+        console.debug('>>> _devWorkspace', _devWorkspace);
+        const token = getToken(request);
+        const { devworkspaceApi } = getDevWorkspaceClient(token);
+        const { headers, devWorkspace } = await devworkspaceApi.patch_patch(
+          namespace,
+          workspaceName,
+          _devWorkspace,
         );
 
         reply.headers(headers).send(devWorkspace);

@@ -45,6 +45,7 @@ mkdir -p "$CHE_SELF_SIGNED_MOUNT_PATH"
 
 # copy certificate from the dashboard pod
 kubectl cp $CHE_NAMESPACE/$DASHBOARD_POD_NAME:/public-certs/che-self-signed/..data/ca.crt "$CHE_SELF_SIGNED_MOUNT_PATH/ca.crt"
+kubectl exec -n "$CHE_NAMESPACE" "$DASHBOARD_POD_NAME" -- cat /public-certs/custom/..data/kube-root-ca.crt.ca.crt >> "$CHE_SELF_SIGNED_MOUNT_PATH/ca.crt"
 
 if [[ -n "$(oc whoami -t)" ]]; then
   echo 'Cluster access token found. Nothing needs to be patched.'

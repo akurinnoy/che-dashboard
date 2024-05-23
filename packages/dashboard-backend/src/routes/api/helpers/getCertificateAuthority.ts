@@ -18,7 +18,7 @@ import path from 'path';
 const DEFAULT_CHE_SELF_SIGNED_MOUNT_PATH = '/public-certs';
 const CHE_SELF_SIGNED_MOUNT_PATH = process.env.CHE_SELF_SIGNED_MOUNT_PATH;
 
-const certificateAuthority = getCertificateAuthority(
+export const certificateAuthority = getCertificateAuthority(
   CHE_SELF_SIGNED_MOUNT_PATH ? CHE_SELF_SIGNED_MOUNT_PATH : DEFAULT_CHE_SELF_SIGNED_MOUNT_PATH,
 );
 
@@ -29,6 +29,27 @@ export const axiosInstance =
         httpsAgent: new https.Agent({
           ca: certificateAuthority,
         }),
+
+        // transformRequest: [
+        //   data => {
+        //     return JSON.stringify(data);
+        //     // return '';
+        //   },
+        // ],
+
+        // transformResponse: [
+        //   data => {
+        //     return [];
+        //     return data;
+        //     const parsedData = JSON.parse(data);
+
+        //     // if (parsedData.error === 'Access denied') {
+        //     //   cookies.remove('access_token');
+        //     //   window.location = `${config.mainSite}/login`;
+        //     // }
+        //     return parsedData;
+        //   },
+        // ],
       })
     : axios.create();
 

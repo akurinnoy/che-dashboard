@@ -81,6 +81,12 @@ export interface IDevWorkspaceApi extends IWatcherService<api.webSocket.Subscrib
     name: string,
     patches: api.IPatch[],
   ): Promise<{ devWorkspace: V1alpha2DevWorkspace; headers: Partial<IncomingHttpHeaders> }>;
+
+  patch_patch(
+    namespace: string,
+    name: string,
+    devWorkspace: V1alpha2DevWorkspace,
+  ): Promise<{ devWorkspace: V1alpha2DevWorkspace; headers: Partial<IncomingHttpHeaders> }>;
 }
 
 export interface IEventApi extends IWatcherService<api.webSocket.SubscribeParams> {
