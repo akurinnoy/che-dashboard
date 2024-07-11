@@ -110,10 +110,17 @@ class ImportFromGit extends React.PureComponent<Props, State> {
 
   private handleConfirmationOnClose(): void {
     this.setState({ isConfirmationOpen: false });
+
+    console.log('>>> ImportFromGit.handleConfirmationOnClose()');
   }
 
   private handleConfirmationOnContinue(): void {
     this.setState({ isConfirmationOpen: false });
+
+    // debug
+    console.log('>>> ImportFromGit.handleConfirmationOnContinue()');
+    return;
+
     this.startFactory();
   }
 
@@ -302,14 +309,17 @@ class ImportFromGit extends React.PureComponent<Props, State> {
   }
 
   public render() {
-    const { isConfirmationOpen, locationValidated } = this.state;
+    const { isConfirmationOpen, location, locationValidated } = this.state;
     return (
       <>
-        <UntrustedRepoModal
-          isOpen={isConfirmationOpen}
-          onContinue={() => this.handleConfirmationOnContinue()}
-          onClose={() => this.handleConfirmationOnClose()}
-        />
+        {isConfirmationOpen && (
+          <UntrustedRepoModal
+            location={location}
+            isOpen={isConfirmationOpen}
+            onContinue={() => this.handleConfirmationOnContinue()}
+            onClose={() => this.handleConfirmationOnClose()}
+          />
+        )}
         <Panel>
           <PanelHeader>
             <Title headingLevel="h3">Import from Git</Title>

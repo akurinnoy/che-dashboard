@@ -10,16 +10,28 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-import { Button, ButtonVariant, Modal, ModalVariant } from '@patternfly/react-core';
+import {
+  Button,
+  ButtonVariant,
+  Checkbox,
+  Modal,
+  ModalVariant,
+  Text,
+  TextContent,
+} from '@patternfly/react-core';
 import React from 'react';
 
+import { SessionStorageKey } from '@/services/session-storage';
+
 export type Props = {
+  location: string;
   isOpen: boolean;
   onClose?: () => void;
   onContinue: () => void;
 };
 export type State = {
-  // continueEnabled: boolean;
+  isTrusted: boolean;
+  trustAllCheckbox: boolean;
 };
 
 export class UntrustedRepoModal extends React.PureComponent<Props, State> {
@@ -27,56 +39,112 @@ export class UntrustedRepoModal extends React.PureComponent<Props, State> {
     super(props);
 
     this.state = {
-      // continueEnabled: false,
+      isTrusted: this.isTrustedRepo(props.location),
+      trustAllCheckbox: false,
     };
   }
 
+  private isTrustedRepo(location: string): boolean {
+    const trustedRepos = sessionStorage.getItem(SessionStorageKey.TRUSTED_REPOSITORIES);
+    if (!trustedRepos) {
+      return false;
+    } else if (trustedRepos === 'all') {
+      return true;
+    }
+
+    const trustedReposArray = trustedRepos.split(',');
+    return trustedReposArray.includes(location);
+  }
+
+  private storeTrustedRepo(): void {
+    const { location } = this.props;
+    const trustedRepos = sessionStorage.getItem(SessionStorageKey.TRUSTED_REPOSITORIES);
+    if (trustedRepos === 'all') {
+      return;
+    } else {
+      const prevArray = trustedRepos ? trustedRepos.split(',') : [];
+      const trustedReposSet = new Set(prevArray);
+      trustedReposSet.add(location);
+      const nextArray = Array.from(trustedReposSet);
+      sessionStorage.setItem(SessionStorageKey.TRUSTED_REPOSITORIES, nextArray.join(','));
+    }
+  }
+
+  private handleTrustAllToggle(checked: boolean): void {
+    this.setState({ trustAllCheckbox: checked });
+  }
+
   private handleClose(): void {
-    this.setState({ continueEnabled: false });
+    this.setState({ trustAllCheckbox: false });
+
     this.props.onClose?.();
   }
 
   private handleContinue(): void {
-    this.setState({ continueEnabled: true });
+    this.storeTrustedRepo();
+
+    this.setState({ trustAllCheckbox: false });
+
     this.props.onContinue();
     this.props.onClose?.();
   }
 
-  private buildModalActions(): React.ReactNode[] {
-    // const { continueEnabled } = this.state;
-    return [
-      <Button
-        key="continue"
-        variant={ButtonVariant.primary}
-        // isDisabled={continueEnabled === false}
-        onClick={() => this.handleContinue()}
-      >
-        Continue
-      </Button>,
-      <Button key="cancel" variant={ButtonVariant.link} onClick={() => this.handleClose()}>
-        Cancel
-      </Button>,
-    ];
+  private buildModalFooter(): React.ReactNode {
+    return (
+      <React.Fragment>
+        <Button
+          key="continue"
+          variant={ButtonVariant.primary}
+          onClick={() => this.handleContinue()}
+        >
+          Continue
+        </Button>
+        <Button key="cancel" variant={ButtonVariant.link} onClick={() => this.handleClose()}>
+          Cancel
+        </Button>
+      </React.Fragment>
+    );
   }
 
   private buildModalBody(): React.ReactNode {
-    return <span>modal body</span>;
+    const { isTrusted: isChecked } = this.state;
+    return (
+      <TextContent>
+        <Text>Do you trust the authors of this repository?</Text>
+        <Text>
+          Click <b>Continue</b> to proceed creating a new workspace from this repository.
+        </Text>
+        <Checkbox
+          id="trust-all-repos-checkbox"
+          isChecked={isChecked}
+          label="Remember my choice for all repositories within this session"
+          onChange={isChecked => this.handleTrustAllToggle(isChecked)}
+        />
+      </TextContent>
+    );
   }
 
   render(): React.ReactNode {
-    const { isOpen } = this.props;
+    const { isOpen, onContinue } = this.props;
+    const { isTrusted } = this.state;
 
-    const title = 'Untrusted Repository Warning';
-    const actions = this.buildModalActions();
+    if (isTrusted) {
+      onContinue();
+      return null;
+    }
+
+    const title = 'Untrusted Repository';
+    const footer = this.buildModalFooter();
     const body = this.buildModalBody();
 
     return (
       <Modal
-        variant={ModalVariant.small}
+        footer={footer}
         isOpen={isOpen}
         title={title}
+        titleIconVariant="warning"
+        variant={ModalVariant.small}
         onClose={() => this.handleClose()}
-        actions={actions}
       >
         {body}
       </Modal>
