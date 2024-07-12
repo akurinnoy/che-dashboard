@@ -14,6 +14,19 @@ import React from 'react';
 
 import { UntrustedRepoModal } from '@/components/UntrustedRepoModal';
 import getComponentRenderer, { screen } from '@/services/__mocks__/getComponentRenderer';
+import SessionStorageService from '@/services/session-storage';
+
+// const mockGetItem = jest.fn();
+// const mockSetItem = jest.fn();
+// jest.mock('@/services/session-storage', () => {
+//   return {
+//     __esModule: true,
+//     default: {
+//       getItem: (...args: unknown[]) => mockGetItem(...args),
+//       setItem: (...args: unknown[]) => mockSetItem(...args),
+//     },
+//   };
+// });
 
 const mockOnContinue = jest.fn();
 const mockOnClose = jest.fn();
@@ -72,5 +85,12 @@ describe('Untrusted Repo Warning Modal', () => {
 });
 
 function getComponent(isOpen = true): React.ReactElement {
-  return <UntrustedRepoModal isOpen={isOpen} onContinue={mockOnContinue} onClose={mockOnClose} />;
+  return (
+    <UntrustedRepoModal
+      location="" // todo
+      isOpen={isOpen}
+      onContinue={mockOnContinue}
+      onClose={mockOnClose}
+    />
+  );
 }

@@ -17,6 +17,7 @@ import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 import { generatePath } from 'react-router-dom';
 
+import { UntrustedRepoModal } from '@/components/UntrustedRepoModal';
 import {
   ProgressStep,
   ProgressStepProps,
@@ -32,6 +33,7 @@ import {
 } from '@/services/helpers/factoryFlow/buildFactoryParams';
 import { buildUserPreferencesLocation, toHref } from '@/services/helpers/location';
 import { AlertItem, UserPreferencesTab } from '@/services/helpers/types';
+import SessionStorageService, { SessionStorageKey } from '@/services/session-storage';
 import { AppState } from '@/store';
 import { selectAllWorkspacesLimit } from '@/store/ClusterConfig/selectors';
 import { selectInfrastructureNamespaces } from '@/store/InfrastructureNamespaces/selectors';
@@ -44,6 +46,9 @@ export type Props = MappedProps &
   };
 export type State = ProgressStepState & {
   factoryParams: FactoryParams;
+  isTrustedRepoWarningOpen: boolean;
+  isRepoTrusted: boolean;
+  // trustedRepoPromise: Promise<boolean> | undefined;
 };
 
 class CreatingStepInitialize extends ProgressStep<Props, State> {
@@ -54,6 +59,8 @@ class CreatingStepInitialize extends ProgressStep<Props, State> {
 
     this.state = {
       factoryParams: buildFactoryParams(props.searchParams),
+      isTrustedRepoWarningOpen: false,
+      isRepoTrusted: false,
       name: this.name,
     };
   }
@@ -89,6 +96,14 @@ class CreatingStepInitialize extends ProgressStep<Props, State> {
       return true;
     }
 
+    // debug
+    if (
+      !this.state.isRepoTrusted !== nextState.isRepoTrusted ||
+      this.state.isTrustedRepoWarningOpen !== nextState.isTrustedRepoWarningOpen
+    ) {
+      return true;
+    }
+
     return false;
   }
 
@@ -105,6 +120,12 @@ class CreatingStepInitialize extends ProgressStep<Props, State> {
       throw new Error(
         `Repository/Devfile URL is missing. Please specify it via url query param: ${window.location.origin}${window.location.pathname}#${factoryPath}`,
       );
+    }
+
+    const trustedRepos = SessionStorageService.get(SessionStorageKey.TRUSTED_REPOSITORIES);
+    if (!trustedRepos || !trustedRepos.includes(sourceUrl)) {
+      this.openConfirmationDialog();
+      return false;
     }
 
     // find error codes
@@ -200,9 +221,24 @@ class CreatingStepInitialize extends ProgressStep<Props, State> {
     }
   }
 
+  private openConfirmationDialog(): void {
+    this.setState({ isTrustedRepoWarningOpen: true });
+  }
+
+  private handleConfirmationOnClose(): void {
+    this.setState({ isTrustedRepoWarningOpen: false });
+  }
+
+  private handleConfirmationOnContinue(): void {
+    this.setState({ isTrustedRepoWarningOpen: false });
+
+    // todo
+    // this.startFactory();
+  }
+
   render(): React.ReactElement {
     const { distance, hasChildren } = this.props;
-    const { name, lastError } = this.state;
+    const { isTrustedRepoWarningOpen, name, lastError } = this.state;
 
     let isError = lastError !== undefined;
     let isWarning = false;
@@ -210,9 +246,18 @@ class CreatingStepInitialize extends ProgressStep<Props, State> {
       isWarning = true;
       isError = false;
     }
+    const { sourceUrl } = this.state.factoryParams;
 
     return (
       <React.Fragment>
+        {isTrustedRepoWarningOpen && (
+          <UntrustedRepoModal
+            location={sourceUrl}
+            isOpen={isTrustedRepoWarningOpen}
+            onContinue={() => this.handleConfirmationOnContinue()}
+            onClose={() => this.handleConfirmationOnClose()}
+          />
+        )}
         <ProgressStepTitle
           distance={distance}
           hasChildren={hasChildren}

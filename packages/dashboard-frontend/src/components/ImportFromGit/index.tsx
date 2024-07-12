@@ -110,17 +110,10 @@ class ImportFromGit extends React.PureComponent<Props, State> {
 
   private handleConfirmationOnClose(): void {
     this.setState({ isConfirmationOpen: false });
-
-    console.log('>>> ImportFromGit.handleConfirmationOnClose()');
   }
 
   private handleConfirmationOnContinue(): void {
     this.setState({ isConfirmationOpen: false });
-
-    // debug
-    console.log('>>> ImportFromGit.handleConfirmationOnContinue()');
-    return;
-
     this.startFactory();
   }
 
