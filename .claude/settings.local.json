@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_github_github__search_pull_requests",
+      "mcp__plugin_github_github__pull_request_read",
+      "mcp__plugin_github_github__search_issues",
+      "mcp__plugin_github_github__issue_read"
+    ]
+  }
+}
