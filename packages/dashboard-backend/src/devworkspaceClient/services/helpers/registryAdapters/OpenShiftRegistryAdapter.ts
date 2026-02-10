@@ -15,6 +15,7 @@
 import {
   BACKUP_ERROR_CODES,
   BACKUP_IMAGE_DEFAULT_TAG,
+  BACKUP_IMAGE_URL_PATTERN,
   DEVWORKSPACE_BACKUP_LABELS,
   OPENSHIFT_INTERNAL_REGISTRY_HOSTNAME,
   OPENSHIFT_INTERNAL_REGISTRY_PORT,
@@ -83,6 +84,7 @@ interface ImageStreamTag {
     namespace: string;
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
+    creationTimestamp?: string;
   };
   image: {
     dockerImageMetadata: {
@@ -307,10 +309,11 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
       const workspaceNamespace =
         labels[DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE] || namespace;
 
-      // Get timestamp from image metadata (use current time as fallback)
-      const timestamp = imageStreamTag.metadata.annotations?.['openshift.io/image.managed']
-        ? new Date().toISOString()
-        : new Date().toISOString();
+      // Get timestamp from image metadata (creation time or backup label)
+      const timestamp =
+        labels['backup.timestamp'] ||
+        imageStreamTag.metadata.creationTimestamp ||
+        new Date().toISOString();
 
       return {
         workspaceName,
@@ -336,7 +339,7 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
    *
    * @param imageUrl - Full image URL
    * @returns Parsed URL components
-   * @throws Error if URL format is invalid
+   * @throws Error if URL format is invalid or registry is not allowed
    */
   private parseImageUrl(imageUrl: string): {
     registry: string;
@@ -344,10 +347,57 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
     name: string;
     tag: string;
   } {
-    // Remove registry prefix (everything before the first /)
-    const parts = imageUrl.split('/');
+    // Normalize URL: add :latest tag if missing for validation
+    let normalizedUrl = imageUrl;
+    if (!imageUrl.includes(':')) {
+      // No port or tag - need to check if it's registry:port or just missing tag
+      const parts = imageUrl.split('/');
+      if (parts.length >= 3) {
+        // Has registry/namespace/name format - add default tag
+        normalizedUrl = `${imageUrl}:${BACKUP_IMAGE_DEFAULT_TAG}`;
+      }
+    } else {
+      // Check if the colon is part of registry:port or name:tag
+      const lastSlashIndex = imageUrl.lastIndexOf('/');
+      const colonAfterSlash = imageUrl.indexOf(':', lastSlashIndex);
+      if (colonAfterSlash === -1) {
+        // Colon is in registry:port, no tag present
+        normalizedUrl = `${imageUrl}:${BACKUP_IMAGE_DEFAULT_TAG}`;
+      }
+    }
+
+    // SECURITY: Validate URL format against expected pattern
+    if (!BACKUP_IMAGE_URL_PATTERN.test(normalizedUrl)) {
+      throw createError(
+        new Error('Invalid image URL format'),
+        BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
+        `Image URL does not match expected format: ${imageUrl}`,
+      );
+    }
+
+    // SECURITY: Ensure it's OpenShift internal registry only (MVP Phase 1 scope)
+    const registryPart = normalizedUrl.split('/')[0].split(':')[0];
+    const isInternal =
+      registryPart === OPENSHIFT_INTERNAL_REGISTRY_HOSTNAME ||
+      registryPart === 'image-registry.openshift-image-registry' ||
+      registryPart.startsWith('image-registry.openshift-image-registry.');
+
+    if (!isInternal) {
+      throw createError(
+        new Error('External registry not allowed'),
+        BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
+        'Only OpenShift internal registry is allowed in Phase 1',
+      );
+    }
+
+    // Parse the normalized URL
+    const parts = normalizedUrl.split('/');
     if (parts.length < 3) {
-      throw new Error(`Invalid image URL format: ${imageUrl}`);
+      throw createError(
+        new Error('Invalid image URL structure'),
+        BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
+        `Invalid image URL format: ${imageUrl}`,
+      );
     }
 
     const registry = parts[0];
