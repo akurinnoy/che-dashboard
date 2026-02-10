@@ -293,29 +293,21 @@ describe('OpenShiftRegistryAdapter', () => {
       expect(backupImages[0].labels).toEqual({});
     });
 
-    it(
-      'should throw REGISTRY_API_ERROR on API failure',
-      async () => {
-        stubCustomObjectsApi.listNamespacedCustomObject = jest
-          .fn()
-          .mockRejectedValue(new Error('API Error'));
+    it('should throw REGISTRY_API_ERROR on API failure', async () => {
+      stubCustomObjectsApi.listNamespacedCustomObject = jest
+        .fn()
+        .mockRejectedValue(new Error('API Error'));
 
-        await expect(registryAdapter.listBackupImages(namespace)).rejects.toThrow();
-      },
-      30000,
-    ); // Increase timeout for retryable exec
+      await expect(registryAdapter.listBackupImages(namespace)).rejects.toThrow();
+    }, 30000); // Increase timeout for retryable exec
 
-    it(
-      'should throw TIMEOUT error on timeout',
-      async () => {
-        stubCustomObjectsApi.listNamespacedCustomObject = jest
-          .fn()
-          .mockImplementation(() => new Promise(resolve => setTimeout(resolve, 15000)));
+    it('should throw TIMEOUT error on timeout', async () => {
+      stubCustomObjectsApi.listNamespacedCustomObject = jest
+        .fn()
+        .mockImplementation(() => new Promise(resolve => setTimeout(resolve, 15000)));
 
-        await expect(registryAdapter.listBackupImages(namespace)).rejects.toThrow();
-      },
-      20000,
-    ); // Increase timeout for this test
+      await expect(registryAdapter.listBackupImages(namespace)).rejects.toThrow();
+    }, 20000); // Increase timeout for this test
   });
 
   describe('getImageMetadata', () => {
@@ -349,17 +341,13 @@ describe('OpenShiftRegistryAdapter', () => {
       await expect(registryAdapter.getImageMetadata(invalidUrl)).rejects.toThrow();
     });
 
-    it(
-      'should throw BACKUP_IMAGE_NOT_FOUND when image does not exist',
-      async () => {
-        stubCustomObjectsApi.getNamespacedCustomObject = jest
-          .fn()
-          .mockRejectedValue(new Error('Not found'));
+    it('should throw BACKUP_IMAGE_NOT_FOUND when image does not exist', async () => {
+      stubCustomObjectsApi.getNamespacedCustomObject = jest
+        .fn()
+        .mockRejectedValue(new Error('Not found'));
 
-        await expect(registryAdapter.getImageMetadata(imageUrl)).rejects.toThrow();
-      },
-      30000,
-    ); // Increase timeout for retryable exec
+      await expect(registryAdapter.getImageMetadata(imageUrl)).rejects.toThrow();
+    }, 30000); // Increase timeout for retryable exec
 
     it('should handle image URL without tag (default to :latest)', async () => {
       const urlWithoutTag = `${OPENSHIFT_INTERNAL_REGISTRY_HOSTNAME}:${OPENSHIFT_INTERNAL_REGISTRY_PORT}/${namespace}/${workspaceName}`;
@@ -384,19 +372,15 @@ describe('OpenShiftRegistryAdapter', () => {
       expect(isAccessible).toBe(true);
     });
 
-    it(
-      'should return false for inaccessible image',
-      async () => {
-        stubCustomObjectsApi.getNamespacedCustomObject = jest
-          .fn()
-          .mockRejectedValue(new Error('Not found'));
+    it('should return false for inaccessible image', async () => {
+      stubCustomObjectsApi.getNamespacedCustomObject = jest
+        .fn()
+        .mockRejectedValue(new Error('Not found'));
 
-        const isAccessible = await registryAdapter.validateImageAccessibility(imageUrl);
+      const isAccessible = await registryAdapter.validateImageAccessibility(imageUrl);
 
-        expect(isAccessible).toBe(false);
-      },
-      30000,
-    ); // Increase timeout for retryable exec
+      expect(isAccessible).toBe(false);
+    }, 30000); // Increase timeout for retryable exec
 
     it('should return false for invalid image URL', async () => {
       const invalidUrl = 'invalid-url';
@@ -405,5 +389,21 @@ describe('OpenShiftRegistryAdapter', () => {
 
       expect(isAccessible).toBe(false);
     });
+
+    it('should reject malicious URLs (SSRF protection)', async () => {
+      const maliciousUrl = 'http://internal-api.local:8080/admin/secrets:tag';
+
+      await expect(registryAdapter.getImageMetadata(maliciousUrl)).rejects.toThrow(
+        'Invalid image URL',
+      );
+    }, 30000); // Increase timeout for retryable exec
+
+    it('should reject external registry URLs (Phase 1 restriction)', async () => {
+      const externalRegistryUrl = 'docker.io/library/nginx:latest';
+
+      await expect(registryAdapter.getImageMetadata(externalRegistryUrl)).rejects.toThrow(
+        'Only OpenShift internal registry is allowed',
+      );
+    }, 30000); // Increase timeout for retryable exec
   });
 });
