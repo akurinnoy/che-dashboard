@@ -57,14 +57,14 @@ describe('RegistryApiService', () => {
   describe('K8s DNS-1123 Validation', () => {
     it('should reject empty namespace', async () => {
       await expect(service.listBackupImages('')).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
+        name: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
         message: expect.stringContaining('cannot be empty'),
       });
     });
 
     it('should reject namespace with uppercase letters', async () => {
       await expect(service.listBackupImages('User-Che')).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
+        name: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
         message: expect.stringContaining('DNS-1123'),
       });
     });
@@ -72,7 +72,7 @@ describe('RegistryApiService', () => {
     it('should reject namespace exceeding 63 characters', async () => {
       const longNamespace = 'a'.repeat(64);
       await expect(service.listBackupImages(longNamespace)).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
+        name: BACKUP_ERROR_CODES.INVALID_NAMESPACE,
         message: expect.stringContaining('maximum length'),
       });
     });
@@ -166,7 +166,7 @@ describe('RegistryApiService', () => {
 
     it('should reject invalid page number', async () => {
       await expect(service.listBackupImages(namespace, undefined, 0)).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_PAGE_NUMBER,
+        name: BACKUP_ERROR_CODES.INVALID_PAGE_NUMBER,
       });
     });
 
@@ -174,7 +174,7 @@ describe('RegistryApiService', () => {
       await expect(
         service.listBackupImages(namespace, undefined, 1, BACKUP_LIST_MAX_PAGE_SIZE + 1),
       ).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_PAGE_SIZE,
+        name: BACKUP_ERROR_CODES.INVALID_PAGE_SIZE,
       });
     });
 
@@ -255,7 +255,7 @@ describe('RegistryApiService', () => {
 
     it('should reject empty image URL', async () => {
       await expect(service.validateBackupImage('')).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
+        name: BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
       });
     });
 
@@ -305,7 +305,7 @@ describe('RegistryApiService', () => {
 
     it('should reject empty image URL', async () => {
       await expect(service.getImageMetadata('')).rejects.toMatchObject({
-        code: BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
+        name: BACKUP_ERROR_CODES.INVALID_IMAGE_URL,
       });
     });
   });
@@ -341,19 +341,22 @@ describe('RegistryApiService', () => {
 
       // Populate cache for namespace1
       await service.listBackupImages('namespace1');
+      expect(mockAdapter.listBackupImages).toHaveBeenCalledTimes(1);
 
       // Populate cache for namespace2
       await service.listBackupImages('namespace2');
+      expect(mockAdapter.listBackupImages).toHaveBeenCalledTimes(2);
 
       // Clear only namespace1
       service.clearNamespaceCache('namespace1');
 
-      // namespace1 should fetch again, namespace2 should use cache
+      // namespace1 should fetch again (cache cleared)
       await service.listBackupImages('namespace1');
-      await service.listBackupImages('namespace2');
+      expect(mockAdapter.listBackupImages).toHaveBeenCalledTimes(3);
 
-      // namespace1: 2 calls, namespace2: 1 call = 4 total (2+1 initial, +1 after clear)
-      expect(mockAdapter.listBackupImages).toHaveBeenCalledTimes(4);
+      // namespace2 should use cache (not cleared)
+      await service.listBackupImages('namespace2');
+      expect(mockAdapter.listBackupImages).toHaveBeenCalledTimes(3); // Still 3, used cache
     });
   });
 
