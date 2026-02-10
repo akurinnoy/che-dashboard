@@ -10,7 +10,7 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-import { api } from '@eclipse-che/common';
+import { api, DEVWORKSPACE_BACKUP_ANNOTATIONS } from '@eclipse-che/common';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { baseApiPath } from '@/constants/config';
@@ -44,7 +44,8 @@ export function registerDevworkspacesRoutes(instance: FastifyInstance) {
       `${baseApiPath}/namespace/:namespace/devworkspaces`,
       getSchema({ tags, params: namespacedSchema, body: devworkspaceSchema }),
       async function (request: FastifyRequest, reply: FastifyReply) {
-        const { devworkspace } = request.body as restParams.IDevWorkspaceSpecParams;
+        const { devworkspace, restoreFromBackup, backupImageUrl } =
+          request.body as restParams.IDevWorkspaceSpecParams;
         const { namespace } = request.params as restParams.INamespacedParams;
         if (!devworkspace.metadata) {
           devworkspace.metadata = {};
@@ -53,6 +54,19 @@ export function registerDevworkspacesRoutes(instance: FastifyInstance) {
           devworkspace.metadata.annotations = {};
         }
         devworkspace.metadata.namespace = namespace;
+
+        // Handle restore from backup
+        if (restoreFromBackup) {
+          devworkspace.metadata.annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE] =
+            'true';
+
+          if (backupImageUrl) {
+            devworkspace.metadata.annotations[
+              DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
+            ] = backupImageUrl;
+          }
+        }
+
         const token = getToken(request);
         const { devworkspaceApi } = getDevWorkspaceClient(token);
         const { headers, devWorkspace } = await devworkspaceApi.create(devworkspace, namespace);

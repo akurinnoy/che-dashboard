@@ -23,6 +23,8 @@ export interface ITemplateBodyParams {
 
 export interface IDevWorkspaceSpecParams {
   devworkspace: V1alpha2DevWorkspace;
+  restoreFromBackup?: boolean;
+  backupImageUrl?: string;
 }
 
 export interface IYamlResolverParams {

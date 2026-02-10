@@ -10,14 +10,17 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
-import { api } from '@eclipse-che/common';
+import { V1alpha2DevWorkspace } from '@devfile/api';
+import { api, DEVWORKSPACE_BACKUP_ANNOTATIONS } from '@eclipse-che/common';
 import { FastifyInstance } from 'fastify';
 
 import { baseApiPath } from '@/constants/config';
 import {
   stubDevWorkspace,
   stubDevWorkspacesList,
+  stubHeaders,
 } from '@/routes/api/helpers/__mocks__/getDevWorkspaceClient';
+import { getDevWorkspaceClient } from '@/routes/api/helpers/getDevWorkspaceClient';
 import { setup, teardown } from '@/utils/appBuilder';
 
 jest.mock('../helpers/getDevWorkspaceClient.ts');
@@ -59,6 +62,123 @@ describe('DevWorkspaces Routes', () => {
       .payload({ devworkspace: {} });
     expect(res.statusCode).toEqual(200);
     expect(res.json()).toEqual(stubDevWorkspace);
+  });
+
+  test('POST ${baseApiPath}/namespace/:namespace/devworkspaces with restoreFromBackup=true', async () => {
+    const mockCreate = jest.fn((devworkspace: V1alpha2DevWorkspace) =>
+      Promise.resolve({ devWorkspace: devworkspace, headers: stubHeaders }),
+    );
+
+    const originalMock = (getDevWorkspaceClient as jest.Mock).getMockImplementation();
+    (getDevWorkspaceClient as jest.Mock).mockImplementationOnce(() => {
+      const client = originalMock!();
+      return {
+        ...client,
+        devworkspaceApi: {
+          ...client.devworkspaceApi,
+          create: mockCreate,
+        },
+      };
+    });
+
+    const res = await app
+      .inject()
+      .post(`${baseApiPath}/namespace/${namespace}/devworkspaces`)
+      .payload({
+        devworkspace: {},
+        restoreFromBackup: true,
+      });
+
+    expect(res.statusCode).toEqual(200);
+    expect(mockCreate).toHaveBeenCalled();
+
+    const createdDevWorkspace = mockCreate.mock.calls[0][0];
+    expect(
+      createdDevWorkspace.metadata?.annotations?.[
+        DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
+      ],
+    ).toEqual('true');
+  });
+
+  test('POST ${baseApiPath}/namespace/:namespace/devworkspaces with restoreFromBackup=true and backupImageUrl', async () => {
+    const mockCreate = jest.fn((devworkspace: V1alpha2DevWorkspace) =>
+      Promise.resolve({ devWorkspace: devworkspace, headers: stubHeaders }),
+    );
+
+    const originalMock = (getDevWorkspaceClient as jest.Mock).getMockImplementation();
+    (getDevWorkspaceClient as jest.Mock).mockImplementationOnce(() => {
+      const client = originalMock!();
+      return {
+        ...client,
+        devworkspaceApi: {
+          ...client.devworkspaceApi,
+          create: mockCreate,
+        },
+      };
+    });
+
+    const backupImageUrl =
+      'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest';
+
+    const res = await app
+      .inject()
+      .post(`${baseApiPath}/namespace/${namespace}/devworkspaces`)
+      .payload({
+        devworkspace: {},
+        restoreFromBackup: true,
+        backupImageUrl,
+      });
+
+    expect(res.statusCode).toEqual(200);
+    expect(mockCreate).toHaveBeenCalled();
+
+    const createdDevWorkspace = mockCreate.mock.calls[0][0];
+    expect(
+      createdDevWorkspace.metadata?.annotations?.[
+        DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
+      ],
+    ).toEqual('true');
+    expect(
+      createdDevWorkspace.metadata?.annotations?.[
+        DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
+      ],
+    ).toEqual(backupImageUrl);
+  });
+
+  test('POST ${baseApiPath}/namespace/:namespace/devworkspaces with restoreFromBackup=false should not set annotations', async () => {
+    const mockCreate = jest.fn((devworkspace: V1alpha2DevWorkspace) =>
+      Promise.resolve({ devWorkspace: devworkspace, headers: stubHeaders }),
+    );
+
+    const originalMock = (getDevWorkspaceClient as jest.Mock).getMockImplementation();
+    (getDevWorkspaceClient as jest.Mock).mockImplementationOnce(() => {
+      const client = originalMock!();
+      return {
+        ...client,
+        devworkspaceApi: {
+          ...client.devworkspaceApi,
+          create: mockCreate,
+        },
+      };
+    });
+
+    const res = await app
+      .inject()
+      .post(`${baseApiPath}/namespace/${namespace}/devworkspaces`)
+      .payload({
+        devworkspace: {},
+        restoreFromBackup: false,
+      });
+
+    expect(res.statusCode).toEqual(200);
+    expect(mockCreate).toHaveBeenCalled();
+
+    const createdDevWorkspace = mockCreate.mock.calls[0][0];
+    expect(
+      createdDevWorkspace.metadata?.annotations?.[
+        DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
+      ],
+    ).toBeUndefined();
   });
 
   test('GET ${baseApiPath}/namespace/:namespace/devworkspaces/:workspaceName', async () => {
