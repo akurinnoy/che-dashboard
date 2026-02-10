@@ -15,6 +15,7 @@ import * as api from './dto/api';
 
 export * from './dto/cluster-info';
 export * from './dto/cluster-config';
+export * from './types';
 
 export { helpers, api };
 
