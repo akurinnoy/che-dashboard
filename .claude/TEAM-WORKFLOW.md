@@ -278,12 +278,13 @@ Developer implements task:
 ```
 Developer signals completion:
 - All tests passing
+- Run `yarn build:dev` to verify build compiles
 - Run `yarn format:fix` on modified files
 - Run `yarn lint:fix` on modified files
 - Verify no linting errors remain
 - Ready for review
 
-IMPORTANT: Format and lint BEFORE requesting review. This ensures reviewers focus on substantive feedback rather than code style issues.
+IMPORTANT: Build, format, and lint BEFORE requesting review. This ensures reviewers focus on substantive feedback rather than build/style issues.
 ```
 
 ### 5. Review Cycle
@@ -585,6 +586,7 @@ Developer verifies:
 - [ ] Tests written and passing
 - [ ] Coverage ≥90% statements, ≥85% branches
 - [ ] TypeScript strict mode compliance
+- [ ] Build compiles (`yarn build:dev` succeeds)
 - [ ] ESLint passing (no errors)
 - [ ] Prettier formatting applied
 - [ ] EPL-2.0 license headers added
@@ -599,6 +601,7 @@ Developer verifies:
 Developer verifies:
 - [ ] All 3 reviews APPROVED
 - [ ] All review issues addressed
+- [ ] Run `yarn build:dev` (verify build)
 - [ ] Run `yarn format:fix`
 - [ ] Run `yarn lint:fix`
 - [ ] All tests still passing
