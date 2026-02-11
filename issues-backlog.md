@@ -1,16 +1,16 @@
 # Backup/Restore Feature - Product Backlog
 
 **Generated:** 2026-02-10
-**Last Updated:** 2026-02-11
-**Status:** 85% Complete (Week 1-2 Done, Week 3-4 Remaining)
+**Last Updated:** 2026-02-11 (Tasks #15-18 completed)
+**Status:** 90% Complete (Week 1-2 100% Done, Week 3-4 Remaining)
 **Product Owner:** team-lead
 
 **Current Progress:**
-- ✅ Week 1 (Foundation): 6/7 issues complete (86%)
-- ✅ Week 2 (API & State): 7/8 issues complete (88%)
+- ✅ Week 1 (Foundation): 6/7 issues complete (86%) - BACKEND-05 deferred to Phase 2
+- ✅ Week 2 (API & State): 8/8 issues complete (100%) - ALL COMPLETE!
 - ⏳ Week 3 (UI Components): 0/5 issues complete (0%)
 - ⏳ Week 4 (Integration & Testing): 0/5 issues complete (0%)
-- **Overall: 17/20 MVP issues complete (85%)**
+- **Overall: 18/20 MVP issues complete (90%)**
 
 ---
 
@@ -676,10 +676,12 @@ PHASE 2 (Post-MVP)
 ### [P2] BACKEND-11: Backend Integration Tests for Backup API
 **Team:** Backend
 **Complexity:** Large
+**Status:** 🔄 Partially Complete (Task #17: Route Registration Tests - ✅ Done)
 
 **Description:** Create comprehensive integration tests for backup API endpoints with mocked Kubernetes and registry responses.
 
 **Acceptance Criteria:**
+- [x] Route registration integration tests (Task #17) - 39 tests, all passing ✅
 - [ ] Integration test suite for all backup API endpoints
 - [ ] Mock Kubernetes CustomObjectAPI for DevWorkspaceOperatorConfig
 - [ ] Mock BatchV1API for Job queries
@@ -696,6 +698,7 @@ PHASE 2 (Post-MVP)
 - Use Jest with ts-jest
 - Mock @kubernetes/client-node APIs
 - Create realistic mock data for ImageStream and Job resources
+- **Task #17 Completed:** Route registration, CORS, Swagger, backwards compatibility all tested
 
 ---
 
@@ -767,15 +770,21 @@ PHASE 2 (Post-MVP)
 - [x] BACKEND-10: Environment Variables (P2) - Task #6
 - [ ] BACKEND-05: JobApiService (P3 - Phase 2) - Deferred to Phase 2
 
-### Week 2 - API Endpoints & Frontend State ✅ COMPLETE
+### Week 2 - API Endpoints & Frontend State ✅ COMPLETE (100%)
 - [x] BACKEND-06: Backup API Routes (P0) - Task #7
-- [ ] BACKEND-07: Enhanced DevWorkspace Creation (P0) - **TODO: Next sprint**
-- [x] BACKEND-08: Job Status Polling (P1) - Task #15
+- [x] BACKEND-07: Enhanced DevWorkspace Creation (P0) - Task #18 ✅
+- [x] BACKEND-08: Job Status Polling (P1) - Task #15 ✅
 - [x] FRONTEND-01: Redux Reducer (P0) - Task #10
 - [x] FRONTEND-02: Redux Actions (P0) - Task #11
 - [x] FRONTEND-03: API Client (P0) - Task #12
 - [x] FRONTEND-04: Selectors (P1) - Task #13
 - [x] FRONTEND-05: Register Store (P1) - Task #14
+
+**Newly Completed (2026-02-11):**
+- Task #15: Backend Jobs API Routes (BACKEND-08) - 3/3 reviews APPROVED
+- Task #16: Backend Backup Service Methods (BACKEND-02 enhancement) - 3/3 reviews APPROVED
+- Task #17: Route Registration Integration Tests (BACKEND-11 partial) - 3/3 reviews APPROVED
+- Task #18: Enhanced DevWorkspace Creation (BACKEND-07) - 3/3 reviews APPROVED
 
 ### Week 3 - UI Components
 - [ ] FRONTEND-06: BackupStatusBadge (P1)
@@ -789,7 +798,7 @@ PHASE 2 (Post-MVP)
 - [ ] FRONTEND-12: Enhance WorkspaceDetails (P1)
 - [ ] FRONTEND-13: Enhance GetStarted (P1)
 - [ ] FRONTEND-14: Frontend Unit Tests (P1)
-- [ ] BACKEND-11: Integration Tests (P2)
+- [~] BACKEND-11: Integration Tests (P2) - **Partially complete** (Task #17: Route registration tests ✅)
 
 ### Week 5 - Phase 2 Planning
 - [ ] BACKEND-09: WebSocket Support (P3 - Phase 2)

@@ -513,6 +513,7 @@ export interface IDevWorkspaceClient {
   sshKeysApi: IShhKeysApi;
   workspacePreferencesApi: IWorkspacePreferencesApi;
   editorsApi: IEditorsApi;
+  backupApi: IBackupApi;
 }
 
 export interface IDevWorkspaceSingletonClient {
@@ -575,4 +576,31 @@ export interface IShhKeysApi {
   list(namespace: string): Promise<Array<api.SshKey>>;
   add(namespace: string, sshKey: api.SshKey): Promise<api.SshKey>;
   delete(namespace: string, name: string): Promise<void>;
+}
+
+export interface IBackupApi {
+  /**
+   * Get cluster-wide backup configuration
+   */
+  getClusterBackupConfig(): Promise<any>;
+
+  /**
+   * Trigger an on-demand backup for a workspace
+   */
+  triggerBackup(namespace: string, workspaceName: string): Promise<any>;
+
+  /**
+   * Get the status of a specific backup job
+   */
+  getBackupJobStatus(namespace: string, jobName: string): Promise<any>;
+
+  /**
+   * Get backup status for a specific workspace
+   */
+  getWorkspaceBackupStatus(namespace: string, workspaceName: string): Promise<any>;
+
+  /**
+   * List all backup jobs in a namespace
+   */
+  listBackupJobs(namespace: string): Promise<any[]>;
 }
