@@ -20,3 +20,4 @@ run/.custom-resources
 run/public-certs
 
 .claude/settings.local.json
+.worktrees/
