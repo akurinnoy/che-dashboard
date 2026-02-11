@@ -327,6 +327,45 @@ Team-lead merges approved branches into main from the main worktree.
 
 ---
 
+## Testing Best Practices
+
+### Running Tests
+
+**Always use `yarn test` with arguments, never call jest directly:**
+
+```bash
+# Run all tests
+yarn test
+
+# Run specific test file or pattern
+yarn test BackupStatusBadge
+yarn test "BackupsView.*spec"
+
+# Run with coverage report
+yarn test --coverage
+
+# Run in watch mode
+yarn test --watch
+
+# Update snapshots
+yarn test -u
+
+# Run specific test suite
+yarn test BackupTab --testNamePattern="should render"
+```
+
+**Why use `yarn test` instead of `jest`:**
+- Pre-configured jest config from package.json
+- Handles monorepo workspace setup automatically
+- No need to specify config path
+- Consistent with project conventions
+
+**Never use:**
+- `jest --config=path/to/jest.config.js` (bypasses workspace setup)
+- Direct `jest` commands without yarn
+
+---
+
 ## Code Quality Standards
 
 ### TypeScript Requirements
