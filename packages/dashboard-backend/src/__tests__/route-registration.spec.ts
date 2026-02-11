@@ -166,9 +166,7 @@ describe('Route Registration Integration Tests', () => {
     });
 
     it('should register delete job route and be accessible', async () => {
-      const res = await app
-        .inject()
-        .delete(`${baseApiPath}/namespace/${namespace}/jobs/test-job`);
+      const res = await app.inject().delete(`${baseApiPath}/namespace/${namespace}/jobs/test-job`);
 
       expect(res.statusCode).toBeLessThan(500);
       expect(res.statusCode).not.toBe(404);

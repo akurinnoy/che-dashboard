@@ -32,6 +32,7 @@ describe('BackupApiService', () => {
 
     mockCustomObjectAPI = {
       getClusterCustomObject: jest.fn(),
+      getNamespacedCustomObject: jest.fn(),
     };
 
     mockBatchV1API = {
@@ -415,6 +416,67 @@ describe('BackupApiService', () => {
 
       expect(result.nextScheduledBackup).toBeUndefined();
     });
+
+    it('should handle empty schedule string', async () => {
+      const mockOperatorConfig = {
+        config: {
+          workspace: {
+            backupCronJob: {
+              enabled: true,
+              schedule: '',
+              registry: 'registry.example.com',
+            },
+          },
+        },
+      };
+
+      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({
+        items: [],
+      });
+
+      const result = await backupApiService.getWorkspaceBackupStatus('user-che', 'workspace-1');
+
+      expect(result.nextScheduledBackup).toBeUndefined();
+    });
+
+    it('should return IN_PROGRESS for job with no status counters', async () => {
+      const mockOperatorConfig = {
+        config: {
+          workspace: {
+            backupCronJob: {
+              enabled: true,
+              schedule: '0 1 * * *',
+              registry: 'registry.example.com',
+            },
+          },
+        },
+      };
+
+      const mockJob: V1Job = {
+        metadata: {
+          name: 'backup-job-1',
+          namespace: 'user-che',
+          labels: {
+            'controller.devfile.io/devworkspace-name': 'workspace-1',
+          },
+        },
+        status: {
+          // No succeeded, failed, or active counters
+          startTime: new Date('2025-02-10T00:55:00Z'),
+        } as V1JobStatus,
+      };
+
+      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({
+        items: [mockJob],
+      });
+
+      const result = await backupApiService.getWorkspaceBackupStatus('user-che', 'workspace-1');
+
+      expect(result.status).toBe(BackupStatus.IN_PROGRESS);
+    });
   });
 
   describe('triggerBackup', () => {
@@ -430,12 +492,23 @@ describe('BackupApiService', () => {
               schedule: '0 1 * * *',
               registry: 'image-registry.openshift-image-registry.svc:5000',
               authSecretName: 'registry-credentials',
+              image: 'quay.io/eclipse/che-backup:latest',
+              serviceAccountName: 'che-workspace',
             },
           },
         },
       };
 
       mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+
+      // Mock DevWorkspace API call for PVC discovery
+      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({
+        body: {
+          status: {
+            devworkspaceId: 'workspace-abc123',
+          },
+        },
+      });
     });
 
     it('should create a backup job with proper configuration', async () => {
@@ -567,7 +640,122 @@ describe('BackupApiService', () => {
       });
     });
 
-    it('should mount workspace PVC', async () => {
+    it('should mount workspace PVC with discovered name', async () => {
+      const mockCreatedJob: V1Job = {
+        metadata: {
+          name: 'backup-job',
+          namespace,
+        },
+        status: {} as V1JobStatus,
+      };
+
+      mockBatchV1API.createNamespacedJob.mockResolvedValue({ body: mockCreatedJob });
+
+      await backupApiService.triggerBackup(namespace, workspaceName);
+
+      const createCall = mockBatchV1API.createNamespacedJob.mock.calls[0][0];
+      const volumes = createCall.body.spec?.template.spec?.volumes;
+
+      expect(volumes).toContainEqual({
+        name: 'workspace-data',
+        persistentVolumeClaim: {
+          claimName: 'workspace-abc123',
+        },
+      });
+    });
+
+    it('should throw error when backup image is not configured', async () => {
+      const mockOperatorConfig = {
+        config: {
+          workspace: {
+            backupCronJob: {
+              enabled: true,
+              schedule: '0 1 * * *',
+              registry: 'image-registry.openshift-image-registry.svc:5000',
+              // image is missing
+            },
+          },
+        },
+      };
+
+      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+
+      await expect(backupApiService.triggerBackup(namespace, workspaceName)).rejects.toThrow(
+        'Backup container image not configured in DevWorkspaceOperatorConfig',
+      );
+
+      expect(mockBatchV1API.createNamespacedJob).not.toHaveBeenCalled();
+    });
+
+    it('should use default service account when not configured', async () => {
+      const mockOperatorConfig = {
+        config: {
+          workspace: {
+            backupCronJob: {
+              enabled: true,
+              schedule: '0 1 * * *',
+              registry: 'image-registry.openshift-image-registry.svc:5000',
+              image: 'quay.io/eclipse/che-backup:latest',
+              // serviceAccountName is missing - should use default
+            },
+          },
+        },
+      };
+
+      const mockCreatedJob: V1Job = {
+        metadata: {
+          name: 'backup-job',
+          namespace,
+        },
+        status: {} as V1JobStatus,
+      };
+
+      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+      mockBatchV1API.createNamespacedJob.mockResolvedValue({ body: mockCreatedJob });
+
+      await backupApiService.triggerBackup(namespace, workspaceName);
+
+      const createCall = mockBatchV1API.createNamespacedJob.mock.calls[0][0];
+      expect(createCall.body.spec?.template.spec?.serviceAccountName).toBe('che-workspace');
+    });
+
+    it('should use configured service account when provided', async () => {
+      const mockOperatorConfig = {
+        config: {
+          workspace: {
+            backupCronJob: {
+              enabled: true,
+              schedule: '0 1 * * *',
+              registry: 'image-registry.openshift-image-registry.svc:5000',
+              image: 'quay.io/eclipse/che-backup:latest',
+              serviceAccountName: 'custom-sa',
+            },
+          },
+        },
+      };
+
+      const mockCreatedJob: V1Job = {
+        metadata: {
+          name: 'backup-job',
+          namespace,
+        },
+        status: {} as V1JobStatus,
+      };
+
+      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({ body: mockOperatorConfig });
+      mockBatchV1API.createNamespacedJob.mockResolvedValue({ body: mockCreatedJob });
+
+      await backupApiService.triggerBackup(namespace, workspaceName);
+
+      const createCall = mockBatchV1API.createNamespacedJob.mock.calls[0][0];
+      expect(createCall.body.spec?.template.spec?.serviceAccountName).toBe('custom-sa');
+    });
+
+    it('should fallback to default PVC pattern when workspace not found', async () => {
+      mockCustomObjectAPI.getNamespacedCustomObject.mockRejectedValue(
+        new Error('Workspace not found'),
+      );
+
       const mockCreatedJob: V1Job = {
         metadata: {
           name: 'backup-job',
@@ -589,6 +777,25 @@ describe('BackupApiService', () => {
           claimName: `claim-${workspaceName}`,
         },
       });
+    });
+
+    it('should use configured backup image', async () => {
+      const mockCreatedJob: V1Job = {
+        metadata: {
+          name: 'backup-job',
+          namespace,
+        },
+        status: {} as V1JobStatus,
+      };
+
+      mockBatchV1API.createNamespacedJob.mockResolvedValue({ body: mockCreatedJob });
+
+      await backupApiService.triggerBackup(namespace, workspaceName);
+
+      const createCall = mockBatchV1API.createNamespacedJob.mock.calls[0][0];
+      const container = createCall.body.spec?.template.spec?.containers[0];
+
+      expect(container?.image).toBe('quay.io/eclipse/che-backup:latest');
     });
   });
 
