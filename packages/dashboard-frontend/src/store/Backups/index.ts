@@ -22,3 +22,4 @@ export {
   reducer as backupsReducer,
   State as BackupsState,
 } from '@/store/Backups/reducer';
+export * from '@/store/Backups/selectors';

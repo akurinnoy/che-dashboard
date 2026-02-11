@@ -18,3 +18,5 @@ yarn-error.log
 run/.che-dashboard-pod
 run/.custom-resources
 run/public-certs
+
+.claude/settings.local.json
