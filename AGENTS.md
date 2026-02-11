@@ -32,11 +32,16 @@ packages/
 
 - **Install dependencies**: `yarn install`
 - **Build all packages**: `yarn build`
-- **Run tests**: `yarn test`
-- **Lint**: `yarn lint` (or `yarn lint:fix`)
-- **Format**: `yarn format` (or `yarn format:fix`)
+- **Build for development**: `yarn build:dev` (faster, with source maps)
+- **Run tests**: `yarn test` (use `yarn test <pattern>` for specific files)
+- **Run tests with coverage**: `yarn test --coverage`
+- **Update snapshots**: `yarn test -u`
+- **Lint**: `yarn lint` (or `yarn lint:fix` to auto-fix)
+- **Format**: `yarn format` (or `yarn format:fix` to auto-fix)
 - **License check**: `yarn license:generate`
 - **Start local dev**: `yarn start`
+
+**Important:** Always use `yarn test` instead of direct `jest` commands. The yarn script handles jest configuration and monorepo workspace setup automatically.
 
 ## API Patterns
 
