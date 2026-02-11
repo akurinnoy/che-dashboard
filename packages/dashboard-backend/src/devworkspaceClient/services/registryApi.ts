@@ -20,15 +20,11 @@ import {
   BackupValidationResult,
 } from '@eclipse-che/common';
 import { KubeConfig } from '@kubernetes/client-node';
+import { CustomObjectsApi } from '@kubernetes/client-node';
 
+import { backupCacheTTL, backupListPageSize, backupRegistryTimeout } from '@/constants/config';
 import { createError } from '@/devworkspaceClient/services/helpers/createError';
 import { IRegistryAdapter } from '@/devworkspaceClient/services/helpers/registryAdapters';
-import {CustomObjectsApi} from '@kubernetes/client-node';
-import {
-  backupCacheTTL,
-  backupListPageSize,
-  backupRegistryTimeout,
-} from '@/constants/config';
 
 /**
  * Validates Kubernetes DNS-1123 subdomain naming convention
@@ -289,7 +285,9 @@ export class RegistryApiService {
         if (cachedResults) {
           let filteredBackups = cachedResults;
           if (workspaceName) {
-            filteredBackups = cachedResults.filter(backup => backup.workspaceName === workspaceName);
+            filteredBackups = cachedResults.filter(
+              backup => backup.workspaceName === workspaceName,
+            );
           }
 
           const startIndex = (page - 1) * pageSize;

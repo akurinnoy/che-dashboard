@@ -118,7 +118,8 @@ describe('Backup API', () => {
         backups: [
           {
             workspaceName: 'workspace-1',
-            imageUrl: 'image-registry.openshift-image-registry.svc:5000/user-che/workspace-1:latest',
+            imageUrl:
+              'image-registry.openshift-image-registry.svc:5000/user-che/workspace-1:latest',
             timestamp: '2026-02-10T12:00:00.000Z',
             sizeBytes: 1024000,
             workspaceExists: true,
@@ -126,7 +127,8 @@ describe('Backup API', () => {
           },
           {
             workspaceName: 'workspace-2',
-            imageUrl: 'image-registry.openshift-image-registry.svc:5000/user-che/workspace-2:latest',
+            imageUrl:
+              'image-registry.openshift-image-registry.svc:5000/user-che/workspace-2:latest',
             timestamp: '2026-02-09T12:00:00.000Z',
             sizeBytes: 2048000,
             workspaceExists: false,
@@ -287,7 +289,9 @@ describe('Backup API', () => {
       const result = await validateBackupImage(namespace, imageUrl);
 
       expect(mockPost).toHaveBeenCalled();
-      expect(mockPost.mock.calls[0][0]).toBe(`/dashboard/api/namespace/${namespace}/backups/validate`);
+      expect(mockPost.mock.calls[0][0]).toBe(
+        `/dashboard/api/namespace/${namespace}/backups/validate`,
+      );
       expect(mockPost.mock.calls[0][1]).toEqual({ imageUrl });
       expect(result).toEqual(mockValidationResult);
       expect(result.valid).toBe(true);
@@ -352,7 +356,9 @@ describe('Backup API', () => {
       const result = await getBackupMetadata(namespace, imageUrl);
 
       expect(mockPost).toHaveBeenCalled();
-      expect(mockPost.mock.calls[0][0]).toBe(`/dashboard/api/namespace/${namespace}/backups/metadata`);
+      expect(mockPost.mock.calls[0][0]).toBe(
+        `/dashboard/api/namespace/${namespace}/backups/metadata`,
+      );
       expect(mockPost.mock.calls[0][1]).toEqual({ imageUrl });
       expect(result).toEqual(mockMetadata);
       expect(result.workspaceName).toBe('my-workspace');

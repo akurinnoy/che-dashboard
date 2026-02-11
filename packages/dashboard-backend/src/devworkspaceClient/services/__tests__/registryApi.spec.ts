@@ -261,7 +261,10 @@ describe('RegistryApiService', () => {
 
     it('should handle timeout gracefully', async () => {
       mockAdapter.validateImageAccessibility.mockImplementation(
-        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Registry query timeout')), 100)),
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Registry query timeout')), 100),
+          ),
       );
 
       const result = await service.validateBackupImage(imageUrl);

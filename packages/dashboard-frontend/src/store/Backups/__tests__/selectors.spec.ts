@@ -14,7 +14,8 @@
 
 import { BackupStatus } from '@eclipse-che/common';
 
-import { State as BackupsState, unloadedState } from '@/store/Backups/reducer';
+import { RootState } from '@/store';
+import { unloadedState } from '@/store/Backups/reducer';
 import {
   selectAllBackupItems,
   selectBackups,
@@ -32,18 +33,12 @@ import {
   selectWorkspacesWithBackups,
 } from '@/store/Backups/selectors';
 
-// Mock RootState type that includes backups slice
-// Note: backups reducer not yet registered in rootReducer (Task #14)
-type MockRootState = {
-  backups: BackupsState;
-};
-
 describe('Backups selectors', () => {
   describe('Basic selectors', () => {
     it('should select entire backups state', () => {
       const mockState = {
         backups: unloadedState,
-      } as any;
+      } as Partial<RootState> as RootState;
 
       const result = selectBackups(mockState);
       expect(result).toEqual(unloadedState);
@@ -59,7 +54,7 @@ describe('Backups selectors', () => {
             isValidating: false,
           },
         },
-      } as any;
+      } as Partial<RootState> as RootState;
 
       const result = selectBackupsLoading(mockState);
       expect(result).toEqual({
@@ -75,7 +70,7 @@ describe('Backups selectors', () => {
           ...unloadedState,
           error: 'Test error message',
         },
-      } as any;
+      } as Partial<RootState> as RootState;
 
       const result = selectBackupsError(mockState);
       expect(result).toBe('Test error message');
@@ -84,7 +79,7 @@ describe('Backups selectors', () => {
     it('should return undefined when no error', () => {
       const mockState = {
         backups: unloadedState,
-      } as any;
+      } as Partial<RootState> as RootState;
 
       const result = selectBackupsError(mockState);
       expect(result).toBeUndefined();
@@ -109,7 +104,7 @@ describe('Backups selectors', () => {
               [workspaceUID]: backupInfo,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupInfo(mockState, workspaceUID);
         expect(result).toEqual(backupInfo);
@@ -118,7 +113,7 @@ describe('Backups selectors', () => {
       it('should return undefined for non-existent workspace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupInfo(mockState, 'unknown-workspace');
         expect(result).toBeUndefined();
@@ -130,7 +125,7 @@ describe('Backups selectors', () => {
             ...unloadedState,
             byWorkspace: {},
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupInfo(mockState, workspaceUID);
         expect(result).toBeUndefined();
@@ -146,7 +141,7 @@ describe('Backups selectors', () => {
               [workspaceUID]: backupInfo,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupStatus(mockState, workspaceUID);
         expect(result).toBe(BackupStatus.SUCCESS);
@@ -155,7 +150,7 @@ describe('Backups selectors', () => {
       it('should return NEVER for non-existent workspace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupStatus(mockState, 'unknown-workspace');
         expect(result).toBe(BackupStatus.NEVER);
@@ -171,7 +166,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupStatus(mockState, workspaceUID);
         expect(result).toBe(BackupStatus.IN_PROGRESS);
@@ -188,7 +183,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceBackupStatus(mockState, workspaceUID);
         expect(result).toBe(BackupStatus.FAILED);
@@ -204,7 +199,7 @@ describe('Backups selectors', () => {
               [workspaceUID]: backupInfo,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceHasBackup(mockState, workspaceUID);
         expect(result).toBe(true);
@@ -213,7 +208,7 @@ describe('Backups selectors', () => {
       it('should return false for non-existent workspace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceHasBackup(mockState, 'unknown-workspace');
         expect(result).toBe(false);
@@ -229,7 +224,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceHasBackup(mockState, workspaceUID);
         expect(result).toBe(false);
@@ -245,7 +240,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceHasBackup(mockState, workspaceUID);
         expect(result).toBe(true);
@@ -262,7 +257,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspaceHasBackup(mockState, workspaceUID);
         expect(result).toBe(true);
@@ -300,7 +295,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackups(mockState, namespace);
         expect(result).toEqual(backupItems);
@@ -309,7 +304,7 @@ describe('Backups selectors', () => {
       it('should return empty array for non-existent namespace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackups(mockState, 'unknown-namespace');
         expect(result).toEqual([]);
@@ -321,7 +316,7 @@ describe('Backups selectors', () => {
             ...unloadedState,
             byNamespace: {},
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackups(mockState, namespace);
         expect(result).toEqual([]);
@@ -337,7 +332,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackupCount(mockState, namespace);
         expect(result).toBe(2);
@@ -346,7 +341,7 @@ describe('Backups selectors', () => {
       it('should return 0 for non-existent namespace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackupCount(mockState, 'unknown-namespace');
         expect(result).toBe(0);
@@ -360,7 +355,7 @@ describe('Backups selectors', () => {
               [namespace]: [],
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectNamespaceBackupCount(mockState, namespace);
         expect(result).toBe(0);
@@ -406,7 +401,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectFilteredNamespaceBackups(mockState, namespace);
         expect(result).toEqual(backupItems);
@@ -420,7 +415,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectFilteredNamespaceBackups(mockState, namespace, 'workspace-1');
         expect(result).toHaveLength(2);
@@ -435,7 +430,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectFilteredNamespaceBackups(mockState, namespace, 'workspace-3');
         expect(result).toEqual([]);
@@ -444,7 +439,7 @@ describe('Backups selectors', () => {
       it('should return empty array for non-existent namespace', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectFilteredNamespaceBackups(mockState, 'unknown-namespace');
         expect(result).toEqual([]);
@@ -458,7 +453,7 @@ describe('Backups selectors', () => {
               [namespace]: backupItems,
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result1 = selectFilteredNamespaceBackups(mockState, namespace, 'workspace-1');
         const result2 = selectFilteredNamespaceBackups(mockState, namespace, 'workspace-1');
@@ -484,7 +479,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspacesWithBackups(mockState);
         expect(result).toEqual(['workspace-1', 'workspace-2']);
@@ -501,7 +496,7 @@ describe('Backups selectors', () => {
               },
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspacesWithBackups(mockState);
         expect(result).toEqual([]);
@@ -510,7 +505,7 @@ describe('Backups selectors', () => {
       it('should return empty array when byWorkspace is empty', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectWorkspacesWithBackups(mockState);
         expect(result).toEqual([]);
@@ -527,7 +522,7 @@ describe('Backups selectors', () => {
               'namespace-2': [backupItems[1], backupItems[2]],
             },
           },
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectAllBackupItems(mockState);
         expect(result).toHaveLength(3);
@@ -537,7 +532,7 @@ describe('Backups selectors', () => {
       it('should return empty array when no backups exist', () => {
         const mockState = {
           backups: unloadedState,
-        } as any;
+        } as Partial<RootState> as RootState;
 
         const result = selectAllBackupItems(mockState);
         expect(result).toEqual([]);
@@ -556,7 +551,7 @@ describe('Backups selectors', () => {
             isValidating: false,
           },
         },
-      } as any;
+      } as Partial<RootState> as RootState;
 
       expect(selectIsLoadingBackups(mockState)).toBe(true);
     });
@@ -571,7 +566,7 @@ describe('Backups selectors', () => {
             isValidating: false,
           },
         },
-      } as any;
+      } as Partial<RootState> as RootState;
 
       expect(selectIsUpdatingBackups(mockState)).toBe(true);
     });
@@ -586,7 +581,7 @@ describe('Backups selectors', () => {
             isValidating: true,
           },
         },
-      } as any;
+      } as Partial<RootState> as RootState;
 
       expect(selectIsValidatingBackup(mockState)).toBe(true);
     });
@@ -594,7 +589,7 @@ describe('Backups selectors', () => {
     it('should return false for all loading flags in unloaded state', () => {
       const mockState = {
         backups: unloadedState,
-      } as any;
+      } as Partial<RootState> as RootState;
 
       expect(selectIsLoadingBackups(mockState)).toBe(false);
       expect(selectIsUpdatingBackups(mockState)).toBe(false);

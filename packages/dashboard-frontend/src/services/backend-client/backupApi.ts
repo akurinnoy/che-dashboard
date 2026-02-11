@@ -63,19 +63,22 @@ export async function listBackups(
   perPage?: number,
 ): Promise<BackupListResponse> {
   try {
-    const response = await AxiosWrapper.createToRetryMissedBearerTokenError().get<BackupListResponse>(
-      `${dashboardBackendPrefix}/namespace/${namespace}/backups`,
-      {
-        params: {
-          workspaceName,
-          page,
-          perPage,
+    const response =
+      await AxiosWrapper.createToRetryMissedBearerTokenError().get<BackupListResponse>(
+        `${dashboardBackendPrefix}/namespace/${namespace}/backups`,
+        {
+          params: {
+            workspaceName,
+            page,
+            perPage,
+          },
         },
-      },
-    );
+      );
     return response.data;
   } catch (e) {
-    throw new Error(`Failed to list backups for namespace '${namespace}'. ${helpers.errors.getMessage(e)}`);
+    throw new Error(
+      `Failed to list backups for namespace '${namespace}'. ${helpers.errors.getMessage(e)}`,
+    );
   }
 }
 
@@ -91,10 +94,11 @@ export async function validateBackupImage(
   imageUrl: string,
 ): Promise<BackupValidationResult> {
   try {
-    const response = await AxiosWrapper.createToRetryMissedBearerTokenError().post<BackupValidationResult>(
-      `${dashboardBackendPrefix}/namespace/${namespace}/backups/validate`,
-      { imageUrl },
-    );
+    const response =
+      await AxiosWrapper.createToRetryMissedBearerTokenError().post<BackupValidationResult>(
+        `${dashboardBackendPrefix}/namespace/${namespace}/backups/validate`,
+        { imageUrl },
+      );
     return response.data;
   } catch (e) {
     throw new Error(`Failed to validate backup image. ${helpers.errors.getMessage(e)}`);
@@ -108,10 +112,7 @@ export async function validateBackupImage(
  * @param imageUrl - Backup image URL
  * @returns Backup metadata including workspace name, timestamp, size, and labels
  */
-export async function getBackupMetadata(
-  namespace: string,
-  imageUrl: string,
-): Promise<BackupItem> {
+export async function getBackupMetadata(namespace: string, imageUrl: string): Promise<BackupItem> {
   try {
     const response = await AxiosWrapper.createToRetryMissedBearerTokenError().post<BackupItem>(
       `${dashboardBackendPrefix}/namespace/${namespace}/backups/metadata`,

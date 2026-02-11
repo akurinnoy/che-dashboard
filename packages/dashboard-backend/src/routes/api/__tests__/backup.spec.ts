@@ -49,9 +49,12 @@ jest.mock('@/devworkspaceClient/services/registryApi', () => ({
 }));
 
 // Mock OpenShiftRegistryAdapter
-jest.mock('@/devworkspaceClient/services/helpers/registryAdapters/OpenShiftRegistryAdapter', () => ({
-  OpenShiftRegistryAdapter: jest.fn().mockImplementation(() => ({})),
-}));
+jest.mock(
+  '@/devworkspaceClient/services/helpers/registryAdapters/OpenShiftRegistryAdapter',
+  () => ({
+    OpenShiftRegistryAdapter: jest.fn().mockImplementation(() => ({})),
+  }),
+);
 
 describe('Backup Routes', () => {
   let app: FastifyInstance;

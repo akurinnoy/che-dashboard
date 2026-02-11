@@ -51,10 +51,7 @@ function validateNumericConfig(
  * Validates registry adapter type
  * Returns default if value is invalid
  */
-function validateRegistryAdapter(
-  envValue: string | undefined,
-  defaultValue: string,
-): string {
+function validateRegistryAdapter(envValue: string | undefined, defaultValue: string): string {
   const validAdapters = ['openshift', 'docker', 'custom'];
   if (!envValue || !validAdapters.includes(envValue)) {
     return defaultValue;
@@ -105,9 +102,4 @@ export const backupRegistryTimeout = validateNumericConfig(
  * Default: 300 (5 minutes)
  * Env: BACKUP_CACHE_TTL
  */
-export const backupCacheTTL = validateNumericConfig(
-  process.env.BACKUP_CACHE_TTL,
-  300,
-  60,
-  3600,
-);
+export const backupCacheTTL = validateNumericConfig(process.env.BACKUP_CACHE_TTL, 300, 60, 3600);

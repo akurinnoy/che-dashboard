@@ -16,13 +16,13 @@ import { BackupStatus } from '@eclipse-che/common';
 import { AnyAction } from 'redux';
 import { ThunkDispatch } from 'redux-thunk';
 
+import { RootState } from '@/store';
 import {
   fetchBackupList,
   fetchWorkspaceBackupStatus,
   validateBackupImage,
 } from '@/store/Backups/actions';
 import { unloadedState } from '@/store/Backups/reducer';
-import { RootState } from '@/store';
 
 // Mock axios
 jest.mock('axios');
@@ -58,7 +58,8 @@ describe('Backup Actions', () => {
         status: BackupStatus.SUCCESS,
         lastBackupTime: '2026-02-10T12:00:00.000Z',
         nextScheduledBackup: '2026-02-11T12:00:00.000Z',
-        backupImageUrl: 'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest',
+        backupImageUrl:
+          'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest',
         sizeBytes: 1024000,
       };
 
@@ -125,7 +126,8 @@ describe('Backup Actions', () => {
         status: BackupStatus.IN_PROGRESS,
         lastBackupTime: '2026-02-10T12:00:00.000Z',
         nextScheduledBackup: '2026-02-11T12:00:00.000Z',
-        backupImageUrl: 'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest',
+        backupImageUrl:
+          'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest',
       };
 
       mockedAxios.get.mockResolvedValueOnce({ data: mockBackupInfo });
@@ -174,7 +176,8 @@ describe('Backup Actions', () => {
         },
         {
           workspaceName: 'other-workspace',
-          imageUrl: 'image-registry.openshift-image-registry.svc:5000/user-che/other-workspace:latest',
+          imageUrl:
+            'image-registry.openshift-image-registry.svc:5000/user-che/other-workspace:latest',
           timestamp: '2026-02-09T12:00:00.000Z',
           sizeBytes: 2048000,
           workspaceExists: false,
@@ -193,16 +196,13 @@ describe('Backup Actions', () => {
 
       const result = await dispatch(fetchBackupList({ namespace }));
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        `/api/namespace/${namespace}/backups`,
-        {
-          params: {
-            workspaceName: undefined,
-            page: undefined,
-            perPage: undefined,
-          },
+      expect(mockedAxios.get).toHaveBeenCalledWith(`/api/namespace/${namespace}/backups`, {
+        params: {
+          workspaceName: undefined,
+          page: undefined,
+          perPage: undefined,
         },
-      );
+      });
       expect(result.type).toBe('backups/fetchBackupList/fulfilled');
       expect(result.payload).toEqual(mockBackupItems);
     });
@@ -231,16 +231,13 @@ describe('Backup Actions', () => {
 
       const result = await dispatch(fetchBackupList({ namespace, workspaceName }));
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        `/api/namespace/${namespace}/backups`,
-        {
-          params: {
-            workspaceName,
-            page: undefined,
-            perPage: undefined,
-          },
+      expect(mockedAxios.get).toHaveBeenCalledWith(`/api/namespace/${namespace}/backups`, {
+        params: {
+          workspaceName,
+          page: undefined,
+          perPage: undefined,
         },
-      );
+      });
       expect(result.payload).toHaveLength(1);
       if (result.payload && typeof result.payload !== 'string') {
         expect(result.payload[0].workspaceName).toBe(workspaceName);
@@ -272,16 +269,13 @@ describe('Backup Actions', () => {
 
       const result = await dispatch(fetchBackupList({ namespace, page, perPage }));
 
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        `/api/namespace/${namespace}/backups`,
-        {
-          params: {
-            workspaceName: undefined,
-            page,
-            perPage,
-          },
+      expect(mockedAxios.get).toHaveBeenCalledWith(`/api/namespace/${namespace}/backups`, {
+        params: {
+          workspaceName: undefined,
+          page,
+          perPage,
         },
-      );
+      });
       expect(result.payload).toEqual(mockBackupItems);
     });
 
@@ -329,7 +323,8 @@ describe('Backup Actions', () => {
 
   describe('validateBackupImage', () => {
     const namespace = 'user-che';
-    const imageUrl = 'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest';
+    const imageUrl =
+      'image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest';
 
     it('should validate accessible backup image successfully', async () => {
       const mockValidationResult = {

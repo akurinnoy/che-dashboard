@@ -22,6 +22,7 @@ import { registerStaticServer } from '@/plugins/staticServer';
 import { registerSwagger } from '@/plugins/swagger';
 import { registerWebSocket } from '@/plugins/webSocket';
 import { registerAirGapSampleRoute } from '@/routes/api/airGapSample';
+import { registerBackupRoutes } from '@/routes/api/backup';
 import { registerClusterConfigRoute } from '@/routes/api/clusterConfig';
 import { registerClusterInfoRoute } from '@/routes/api/clusterInfo';
 import { registerDataResolverRoute } from '@/routes/api/dataResolver';
@@ -37,6 +38,7 @@ import { registerGitBranchesRoute } from '@/routes/api/gitBranches';
 import { registerGitConfigRoutes } from '@/routes/api/gitConfig';
 import { getDevWorkspaceClient } from '@/routes/api/helpers/getDevWorkspaceClient';
 import { getServiceAccountToken } from '@/routes/api/helpers/getServiceAccountToken';
+import { registerJobsRoutes } from '@/routes/api/jobs';
 import { registerKubeConfigRoute } from '@/routes/api/kubeConfig';
 import { registerPersonalAccessTokenRoutes } from '@/routes/api/personalAccessToken';
 import { registerPodmanLoginRoute } from '@/routes/api/podmanLogin';
@@ -112,6 +114,8 @@ export default async function buildApp(server: FastifyInstance): Promise<unknown
 
     registerPodsRoutes(server),
 
+    registerJobsRoutes(server),
+
     registerKubeConfigRoute(server),
 
     registerPodmanLoginRoute(server),
@@ -139,5 +143,7 @@ export default async function buildApp(server: FastifyInstance): Promise<unknown
     registerWorkspacePreferencesRoute(server),
 
     registerAirGapSampleRoute(server),
+
+    registerBackupRoutes(server),
   ]);
 }
