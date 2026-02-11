@@ -52,6 +52,136 @@
 
 ---
 
+## Git Worktrees for Developer Isolation
+
+### Why Separate Worktrees?
+
+**Problem Solved:** Prevents file mixing when multiple developers work simultaneously in the same repository.
+
+**Before (Shared Worktree):**
+- Developers working in the same directory
+- Risk of accidentally staging each other's files
+- Required manual `git status` checks before every commit
+- Caused commit mixing incidents (Tasks #1-2, #3-4)
+
+**After (Separate Worktrees):**
+- Each developer has their own isolated workspace
+- Impossible to accidentally stage another dev's files
+- Clean `git status` for each developer
+- Independent commits to separate branches
+
+### Worktree Structure
+
+```
+che-dashboard-backup-restore-with-agent-teams/  (team-lead's main worktree)
+├── .worktrees/                                  (ignored by git)
+│   ├── dev-sam-v2/                             (dev-sam-v2's workspace)
+│   │   └── [full repository on dev-sam-v2/week3-frontend branch]
+│   └── dev-alex/                               (dev-alex's workspace)
+│       └── [full repository on dev-alex/week3-frontend branch]
+├── packages/                                    (team-lead's workspace)
+└── ...
+```
+
+**Branch Strategy:**
+- **Main worktree:** Team lead works here, conducts reviews, merges branches
+- **Developer branches:** Each developer commits to their own branch (e.g., `dev-alex/week3-frontend`)
+- **Integration:** Team lead merges dev branches into main branch when tasks complete
+
+### Setup Commands
+
+**Create worktrees (already done):**
+```bash
+# Create .worktrees directory
+mkdir -p .worktrees
+
+# Add to .gitignore
+echo ".worktrees/" >> .gitignore
+
+# Create dev-sam-v2 worktree
+git worktree add .worktrees/dev-sam-v2 -b dev-sam-v2/week3-frontend
+
+# Create dev-alex worktree
+git worktree add .worktrees/dev-alex -b dev-alex/week3-frontend
+
+# Verify
+git worktree list
+```
+
+**View all worktrees:**
+```bash
+git worktree list
+```
+
+**Remove worktree (when developer finishes or respawns):**
+```bash
+# Remove worktree
+git worktree remove .worktrees/dev-sam-v2
+
+# Delete branch (if no longer needed)
+git branch -D dev-sam-v2/week3-frontend
+```
+
+### Developer Workflow
+
+**When spawning a developer:**
+```
+Team lead sends in spawn message:
+- Your workspace: .worktrees/dev-sam-v2
+- Your branch: dev-sam-v2/week3-frontend
+- cd to your workspace before starting work
+```
+
+**Developer commits to their branch:**
+```bash
+# Developer works in their worktree
+cd .worktrees/dev-sam-v2
+
+# Commit changes to their branch
+git add src/path/to/file.ts
+git commit -m "feat: implement feature"
+
+# Changes are immediately visible in shared repository
+# Team lead can see commits from any worktree:
+git log dev-sam-v2/week3-frontend
+```
+
+**Team lead integration:**
+```bash
+# Team lead reviews and merges from main worktree
+cd /path/to/main/worktree
+
+# Review dev branch
+git log dev-sam-v2/week3-frontend
+git diff main..dev-sam-v2/week3-frontend
+
+# Merge when approved
+git checkout main
+git merge dev-sam-v2/week3-frontend
+
+# Push to remote
+git push origin main
+```
+
+### Benefits
+
+1. **File Isolation:** Each dev only sees their files in `git status`
+2. **No Accidental Staging:** Impossible to stage another dev's work
+3. **Parallel Work:** Developers work independently without coordination overhead
+4. **Clean History:** Each branch has clear ownership and purpose
+5. **Easy Review:** Team lead can review each branch in isolation
+6. **Testing Isolation:** Each worktree can run tests without port conflicts
+
+### Current Worktrees
+
+```
+Main worktree:        backupt-restore-with-agent-teams (team-lead)
+dev-sam-v2 worktree:  dev-sam-v2/week3-frontend (at .worktrees/dev-sam-v2)
+dev-alex worktree:    dev-alex/week3-frontend (at .worktrees/dev-alex)
+```
+
+---
+
 ## Mandatory 3-Review Process
 
 ### Review Requirements
@@ -182,12 +312,16 @@ If CONDITIONAL or REJECTED:
 
 ### 7. Commit Phase
 ```
-team-lead instructs commit:
-1. Run formatter: yarn format:fix
-2. Run linter: yarn lint:fix
-3. Stage specific files
-4. Commit with provided message
-5. Confirm completion
+Developer commits in their worktree:
+1. cd to your worktree (e.g., .worktrees/dev-alex)
+2. Run formatter: yarn format:fix
+3. Run linter: yarn lint:fix
+4. Stage specific files
+5. Commit with provided message to your branch
+6. Confirm completion to team-lead
+
+Note: With separate worktrees, developers work on their own branches.
+Team-lead merges approved branches into main from the main worktree.
 ```
 
 ---
@@ -472,21 +606,29 @@ Developer verifies:
 
 ### Commit Process
 
-1. **Format and Lint:**
+**Developer Workflow (in their worktree):**
+
+1. **Navigate to your worktree:**
 ```bash
-cd packages/dashboard-backend
+cd .worktrees/dev-alex  # or dev-sam-v2, etc.
+```
+
+2. **Format and Lint:**
+```bash
+cd packages/dashboard-backend  # or dashboard-frontend
 yarn format:fix
 yarn lint:fix
 ```
 
-2. **Stage Files:**
+3. **Stage Files:**
 ```bash
 git add src/path/to/file1.ts
 git add src/path/to/file2.spec.ts
 # Stage only files belonging to this task
+# With separate worktrees, you can safely use git add without risk
 ```
 
-3. **Commit:**
+4. **Commit to your branch:**
 ```bash
 git commit -m "type(scope): description
 
@@ -497,10 +639,26 @@ git commit -m "type(scope): description
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ```
 
-4. **Verify:**
+5. **Verify:**
 ```bash
 git log -1 --stat
 git status  # Should be clean
+```
+
+**Team Lead Integration (from main worktree):**
+
+After developer commits, team lead merges approved work:
+```bash
+# Review the branch
+git log dev-alex/week3-frontend
+git diff main..dev-alex/week3-frontend
+
+# Merge to main
+git checkout main
+git merge dev-alex/week3-frontend --no-ff
+
+# Push (if ready)
+git push origin main
 ```
 
 ---
