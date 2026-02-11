@@ -16,18 +16,11 @@ import { BackupStatus } from '@eclipse-che/common';
 import { createSelector } from '@reduxjs/toolkit';
 
 import { RootState } from '@/store';
-import { State as BackupsState } from '@/store/Backups/reducer';
-
-/**
- * Extended RootState type that includes backups slice
- * Note: This will be part of the actual RootState when Task #14 (Register Backup Store Slice) is complete
- */
-type RootStateWithBackups = RootState & { backups: BackupsState };
 
 /**
  * Base selector for the entire backups state slice
  */
-const selectBackupsState = (state: RootStateWithBackups) => state.backups;
+const selectBackupsState = (state: RootState) => state.backups;
 
 /**
  * Basic Selectors
@@ -41,10 +34,7 @@ export const selectBackups = selectBackupsState;
 /**
  * Select the loading state for all backup operations
  */
-export const selectBackupsLoading = createSelector(
-  selectBackupsState,
-  state => state.loading,
-);
+export const selectBackupsLoading = createSelector(selectBackupsState, state => state.loading);
 
 /**
  * Select the error message if any operation failed
@@ -60,7 +50,7 @@ export const selectBackupsError = createSelector(selectBackupsState, state => st
  * Returns undefined if workspace has no backup info
  */
 export const selectWorkspaceBackupInfo = createSelector(
-  [selectBackupsState, (_state: RootStateWithBackups, workspaceUID: string) => workspaceUID],
+  [selectBackupsState, (_state: RootState, workspaceUID: string) => workspaceUID],
   (backups, workspaceUID) => backups.byWorkspace[workspaceUID],
 );
 
@@ -69,7 +59,7 @@ export const selectWorkspaceBackupInfo = createSelector(
  * Returns BackupStatus.NEVER if workspace has no backup info
  */
 export const selectWorkspaceBackupStatus = createSelector(
-  [selectBackupsState, (_state: RootStateWithBackups, workspaceUID: string) => workspaceUID],
+  [selectBackupsState, (_state: RootState, workspaceUID: string) => workspaceUID],
   (backups, workspaceUID) => backups.byWorkspace[workspaceUID]?.status || BackupStatus.NEVER,
 );
 
@@ -78,7 +68,7 @@ export const selectWorkspaceBackupStatus = createSelector(
  * Returns true if backup info exists (regardless of status)
  */
 export const selectWorkspaceHasBackup = createSelector(
-  [selectBackupsState, (_state: RootStateWithBackups, workspaceUID: string) => workspaceUID],
+  [selectBackupsState, (_state: RootState, workspaceUID: string) => workspaceUID],
   (backups, workspaceUID) => {
     const info = backups.byWorkspace[workspaceUID];
     return !!info && info.status !== BackupStatus.NEVER;
@@ -94,7 +84,7 @@ export const selectWorkspaceHasBackup = createSelector(
  * Returns empty array if namespace has no backups
  */
 export const selectNamespaceBackups = createSelector(
-  [selectBackupsState, (_state: RootStateWithBackups, namespace: string) => namespace],
+  [selectBackupsState, (_state: RootState, namespace: string) => namespace],
   (backups, namespace) => backups.byNamespace[namespace] || [],
 );
 
@@ -102,7 +92,7 @@ export const selectNamespaceBackups = createSelector(
  * Select the count of backups in a specific namespace
  */
 export const selectNamespaceBackupCount = createSelector(
-  [selectBackupsState, (_state: RootStateWithBackups, namespace: string) => namespace],
+  [selectBackupsState, (_state: RootState, namespace: string) => namespace],
   (backups, namespace) => backups.byNamespace[namespace]?.length || 0,
 );
 
@@ -118,8 +108,8 @@ export const selectNamespaceBackupCount = createSelector(
 export const selectFilteredNamespaceBackups = createSelector(
   [
     selectBackupsState,
-    (_state: RootStateWithBackups, namespace: string) => namespace,
-    (_state: RootStateWithBackups, _namespace: string, workspaceName?: string) => workspaceName,
+    (_state: RootState, namespace: string) => namespace,
+    (_state: RootState, _namespace: string, workspaceName?: string) => workspaceName,
   ],
   (backups, namespace, workspaceName) => {
     const namespaceBackups = backups.byNamespace[namespace] || [];
