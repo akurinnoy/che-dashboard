@@ -17,7 +17,6 @@
 - **dev-alex** - Senior fullstack developer (general-purpose agent)
 - **qe-taylor** - QE specialist (general-purpose agent)
 - **design-riley** - UI/UX designer (general-purpose agent) - For frontend component design
-- **sec-morgan** - Security specialist (general-purpose agent) - For security review and threat modeling
 
 **Note:** For Week 3-4 (Frontend UI Components), the team composition shifts to emphasize UI/UX design and security. Developers focus on implementation while designers provide mockups/patterns and security specialists conduct OWASP reviews.
 
@@ -245,18 +244,55 @@ dev-alex worktree:    dev-alex/week3-frontend (at .worktrees/dev-alex)
 
 ### Review Assignment Pattern
 
-**Standard Flow:**
-1. Developer completes task
-2. Team lead conducts first review
-3. Team lead assigns 2 peer reviews:
-   - Prefer: Developer who identified issues (if re-review)
-   - Prefer: QE reviewer for final validation
-   - Alternate: Other available developers
-4. All 3 reviews must APPROVE before merge
+**OPTIMIZED FLOW (Eliminates Delays):**
+
+When task complete, **developer messages idle reviewers directly**:
+
+```json
+// Developer does this IMMEDIATELY after completing work:
+SendMessage(type: "message", recipient: "qe-jordan-2",
+            content: "Task #10 complete and ready for review at .worktrees/dev-sam-v3. Tests: 24/24 passing, build verified.",
+            summary: "Task #10 ready for QE review")
+
+SendMessage(type: "message", recipient: "design-riley-4",
+            content: "Task #10 ready for design review. New BackupModal component at .worktrees/dev-sam-v3/packages/dashboard-frontend/src/components/BackupModal",
+            summary: "Task #10 ready for design review")
+
+SendMessage(type: "message", recipient: "team-lead",
+            content: "Task #10 complete. Requested reviews from qe-jordan-2 and design-riley-4.",
+            summary: "Task #10 complete, reviews requested")
+```
+
+**Benefits:**
+- ✅ No waiting for team-lead to assign reviewers
+- ✅ Reviews start immediately in parallel
+- ✅ Uses existing idle reviewers (no spawn overhead)
+- ✅ Team-lead monitors but doesn't bottleneck critical path
+
+**Developer Responsibilities:**
+1. Complete task (all tests pass, lint clean, build verified)
+2. Message 2 idle reviewers directly with review request
+3. Notify team-lead that reviews are in progress
+4. Respond to reviewer questions promptly
+5. After all reviews complete, notify team-lead with aggregated scores
+6. Wait for team-lead final approval before commit
+
+**Reviewer Responsibilities:**
+1. Receive review request from developer
+2. Conduct review (code, tests, design, QE as appropriate)
+3. Message developer directly with score and feedback
+4. If APPROVED, developer can proceed; if CONDITIONAL, developer fixes and re-requests
+
+**Team-Lead Responsibilities:**
+1. Conduct own review in parallel with peer reviews
+2. Monitor review progress (not blocking path)
+3. Aggregate scores once all reviews complete
+4. Give final commit approval if avg ≥8/10
+5. Handle edge cases (conflicting reviews, respawns needed)
 
 **Re-Review After Fixes:**
-- Original reviewer(s) who identified issues MUST re-review
-- QE reviewer conducts fresh review of fixed version
+- Developer messages same reviewers for re-review
+- Original reviewers conduct focused re-review
 - Team lead confirms all fixes applied
 
 ### Review Standards
@@ -540,18 +576,72 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 }
 ```
 
+### Direct Peer-to-Peer Communication (PREFERRED)
+
+**CRITICAL OPTIMIZATION:** Developers should message **idle reviewers directly** to request reviews instead of waiting for team-lead assignment.
+
+**How to Find Idle Reviewers:**
+- Check team roster for available QE/design reviewers
+- Common idle reviewers: qe-jordan-2, qe-taylor-2, design-riley-4
+- If unsure, message team-lead: "Who's available for review?"
+
+**Developer Requests Review (IMMEDIATE - No Waiting):**
+```json
+{
+  "type": "message",
+  "recipient": "qe-jordan-2",
+  "content": "Task #10 ready for QE review. Location: .worktrees/dev-sam-v3. Tests: 24/24 passing, coverage 95%. Focus: new validation logic in BackupValidator.",
+  "summary": "Task #10 ready for QE review"
+}
+```
+
+**Reviewer Responds Directly to Developer:**
+```json
+{
+  "type": "message",
+  "recipient": "dev-sam-v3",
+  "content": "Task #10 QE review complete: 8.5/10 APPROVED. Tests are thorough. Suggestion: add timeout edge case test.",
+  "summary": "Task #10 QE review: 8.5/10 APPROVED"
+}
+```
+
+**Benefits of Direct Communication:**
+- ✅ Eliminates bottlenecks (don't wait for team-lead relay)
+- ✅ Reviews start immediately (idle reviewers pick up work instantly)
+- ✅ Faster feedback loops
+- ✅ Team-lead can focus on high-level coordination
+- ✅ No spawn overhead (uses existing idle reviewers)
+
+**When to Loop in Team-Lead:**
+- Final commit approval (always required after all reviews)
+- Conflicting review feedback
+- Architectural decisions
+- Priority/scope changes
+- Blocked on external dependencies
+- No idle reviewers available (team-lead spawns new ones)
+
 ### When to Communicate
 
+**Developers should message reviewers directly when:**
+- Task ready for review (spawn reviewers + notify them)
+- Responding to review questions
+- Fixes applied, ready for re-review
+
 **Developers should message team-lead when:**
-- Task implementation complete
+- All reviews complete, ready for final approval
 - Blocked by dependencies
 - Questions about requirements
 - Significant architectural decisions needed
-- Review feedback unclear
+
+**Reviewers should message developers directly when:**
+- Review complete (send score + feedback)
+- Questions about implementation
+- Clarification needed on requirements
 
 **Team-lead messages developers when:**
 - Assigning new tasks
-- Providing review feedback
+- Providing final commit approval
+- Resolving conflicts or blockers
 - Requesting fixes
 - Approving for merge
 - Requesting commit
