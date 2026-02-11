@@ -50,6 +50,42 @@
 - Only the team-lead session can use `/compact` for context management
 - Teammates must rely on respawn to reset accumulated context
 
+### Teammate Lifecycle Management
+
+**CRITICAL: Prevent Teammate Accumulation**
+
+When respawning teammates, **always shut down the old version immediately** to prevent accumulation of inactive agents:
+
+**Correct Respawn Pattern:**
+```
+1. Spawn new version: dev-alex-v3 (sonnet)
+2. IMMEDIATELY send shutdown_request to old version: dev-alex-v2
+3. Wait for shutdown confirmation
+4. Assign work to new version
+```
+
+**Why This Matters:**
+- Multiple versions of the same teammate create UI clutter
+- Old versions consume memory/resources even when idle
+- Can cause confusion about which version is active
+- Makes team status harder to track
+
+**Shutdown Old Teammates Proactively:**
+- After respawn: Shutdown old version immediately
+- Before pause: Shutdown all active teammates
+- Before major context switches: Clean up idle teammates
+
+**Checking Active Teammates:**
+Look for the teammate list in the UI. If you see multiple versions (e.g., dev-alex, dev-alex-v2, dev-alex-v3), immediately shut down the older versions.
+
+**Example Cleanup:**
+```bash
+# Send shutdown requests to old versions
+SendMessage(type: shutdown_request, recipient: dev-alex)
+SendMessage(type: shutdown_request, recipient: dev-alex-v2)
+# Keep only: dev-alex-v3 (current version)
+```
+
 ---
 
 ## Git Worktrees for Developer Isolation
