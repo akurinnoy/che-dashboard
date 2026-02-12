@@ -550,125 +550,7 @@ describe('Backup API Integration Tests', () => {
   // GET /api/namespace/:namespace/backups
   // Integration: route → RegistryApiService → mock adapter
   // ========================================================================
-  describe('GET backups - Pagination Integration', () => {
-    it('should handle pagination with page=1, perPage=2 from 5 items', async () => {
-      const mockBackupList = {
-        backups: [
-          {
-            workspaceName: 'workspace-1',
-            imageUrl: 'registry/ns/workspace-1:latest',
-            timestamp: '2026-02-10T12:00:00.000Z',
-            sizeBytes: 1024000,
-            workspaceExists: true,
-            labels: {},
-          },
-          {
-            workspaceName: 'workspace-2',
-            imageUrl: 'registry/ns/workspace-2:latest',
-            timestamp: '2026-02-09T12:00:00.000Z',
-            sizeBytes: 2048000,
-            workspaceExists: true,
-            labels: {},
-          },
-        ],
-        total: 5,
-        page: 1,
-        perPage: 2,
-      };
-
-      mockAdapterListBackupImages.mockResolvedValue(mockBackupList.backups);
-      // Mock workspace existence check
-      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({});
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/backups?page=1&perPage=2`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.page).toBe(1);
-      expect(response.perPage).toBe(2);
-      expect(response.backups).toHaveLength(2);
-    });
-
-    it('should handle last page with partial results', async () => {
-      const allBackups = Array.from({ length: 5 }, (_, i) => ({
-        workspaceName: `workspace-${i}`,
-        imageUrl: `registry/ns/workspace-${i}:latest`,
-        timestamp: '2026-02-10T12:00:00.000Z',
-        sizeBytes: 1024000,
-        workspaceExists: true,
-        labels: {},
-      }));
-
-      mockAdapterListBackupImages.mockResolvedValue(allBackups);
-      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({});
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/backups?page=2&perPage=3`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.page).toBe(2);
-      expect(response.perPage).toBe(3);
-      // 5 items total, page 2 with perPage 3 → items 3-4 (2 items)
-      expect(response.backups).toHaveLength(2);
-      expect(response.total).toBe(5);
-    });
-
-    it('should return empty backups for page beyond total', async () => {
-      const allBackups = Array.from({ length: 3 }, (_, i) => ({
-        workspaceName: `workspace-${i}`,
-        imageUrl: `registry/ns/workspace-${i}:latest`,
-        timestamp: '2026-02-10T12:00:00.000Z',
-        sizeBytes: 1024000,
-        workspaceExists: true,
-        labels: {},
-      }));
-
-      mockAdapterListBackupImages.mockResolvedValue(allBackups);
-      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({});
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/backups?page=10&perPage=5`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.backups).toHaveLength(0);
-      expect(response.total).toBe(3);
-      expect(response.page).toBe(10);
-    });
-
-    it('should handle perPage=1 for single item pages', async () => {
-      const allBackups = Array.from({ length: 3 }, (_, i) => ({
-        workspaceName: `workspace-${i}`,
-        imageUrl: `registry/ns/workspace-${i}:latest`,
-        timestamp: '2026-02-10T12:00:00.000Z',
-        sizeBytes: 1024000,
-        workspaceExists: true,
-        labels: {},
-      }));
-
-      mockAdapterListBackupImages.mockResolvedValue(allBackups);
-      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({});
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/backups?page=2&perPage=1`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.backups).toHaveLength(1);
-      expect(response.perPage).toBe(1);
-      expect(response.total).toBe(3);
-    });
-
+  describe('GET backups - List Integration', () => {
     it('should list multiple backups with mixed workspace existence', async () => {
       const allBackups = [
         {
@@ -706,7 +588,7 @@ describe('Backup API Integration Tests', () => {
       expect(response.backups[1].workspaceExists).toBe(false);
     });
 
-    it('should filter by workspace name and paginate', async () => {
+    it('should filter by workspace name', async () => {
       const allBackups = [
         {
           workspaceName: 'ws-alpha',
@@ -736,17 +618,15 @@ describe('Backup API Integration Tests', () => {
 
       const res = await app
         .inject()
-        .get(
-          `${baseApiPath}/namespace/${namespace}/backups?workspaceName=ws-alpha&page=1&perPage=1`,
-        );
+        .get(`${baseApiPath}/namespace/${namespace}/backups?workspaceName=ws-alpha`);
 
       expect(res.statusCode).toEqual(200);
       const response = res.json();
 
-      // Should only return ws-alpha backups, paginated
-      expect(response.backups).toHaveLength(1);
-      expect(response.backups[0].workspaceName).toBe('ws-alpha');
-      expect(response.total).toBe(2); // 2 ws-alpha backups total
+      // Should only return ws-alpha backups
+      expect(response.backups).toHaveLength(2);
+      expect(response.backups.every((b: any) => b.workspaceName === 'ws-alpha')).toBe(true);
+      expect(response.total).toBe(2);
     });
 
     it('should return empty list when adapter returns no images', async () => {

@@ -14,7 +14,6 @@
 
 import {
   BACKUP_ERROR_CODES,
-  BACKUP_LIST_MAX_PAGE_SIZE,
   BackupItem,
   BackupListResponse,
   BackupValidationResult,
@@ -22,7 +21,7 @@ import {
 import { KubeConfig } from '@kubernetes/client-node';
 import { CustomObjectsApi } from '@kubernetes/client-node';
 
-import { backupCacheTTL, backupListPageSize, backupRegistryTimeout } from '@/constants/config';
+import { backupCacheTTL, backupRegistryTimeout } from '@/constants/config';
 import { createError } from '@/devworkspaceClient/services/helpers/createError';
 import { IRegistryAdapter } from '@/devworkspaceClient/services/helpers/registryAdapters';
 
@@ -163,13 +162,11 @@ export class RegistryApiService {
   }
 
   /**
-   * Lists backup images for a workspace with pagination
+   * Lists backup images for a namespace, optionally filtered by workspace name
    *
    * @param namespace - Kubernetes namespace (validated against DNS-1123)
-   * @param workspaceName - DevWorkspace name (validated against DNS-1123)
-   * @param page - Page number (1-indexed, default: 1)
-   * @param pageSize - Items per page (default: 50, max: 100)
-   * @returns Paginated list of backup images with metadata
+   * @param workspaceName - Optional DevWorkspace name filter (validated against DNS-1123)
+   * @returns List of all backup images with metadata
    *
    * CACHING: Results cached for 5 minutes per namespace (not per workspace)
    * TIMEOUT: 10-second timeout with fallback to cached results
@@ -177,30 +174,11 @@ export class RegistryApiService {
   async listBackupImages(
     namespace: string,
     workspaceName?: string,
-    page: number = 1,
-    pageSize: number = backupListPageSize,
   ): Promise<BackupListResponse> {
     // SECURITY: Validate K8s naming convention
     validateK8sName(namespace, 'namespace');
     if (workspaceName) {
       validateK8sName(workspaceName, 'workspaceName');
-    }
-
-    // Validate pagination parameters
-    if (page < 1) {
-      throw createError(
-        new Error('Invalid page number'),
-        BACKUP_ERROR_CODES.INVALID_PAGE_NUMBER,
-        'Page number must be >= 1',
-      );
-    }
-
-    if (pageSize < 1 || pageSize > BACKUP_LIST_MAX_PAGE_SIZE) {
-      throw createError(
-        new Error('Invalid page size'),
-        BACKUP_ERROR_CODES.INVALID_PAGE_SIZE,
-        `Page size must be between 1 and ${BACKUP_LIST_MAX_PAGE_SIZE}`,
-      );
     }
 
     const cacheKey = this.getCacheKey(namespace, 'listBackupImages');
@@ -213,16 +191,11 @@ export class RegistryApiService {
         filteredBackups = cached.filter(backup => backup.workspaceName === workspaceName);
       }
 
-      // Return paginated cached results
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const backups = filteredBackups.slice(startIndex, endIndex);
-
       return {
-        backups,
+        backups: filteredBackups,
         total: filteredBackups.length,
-        page,
-        perPage: pageSize,
+        page: 1,
+        perPage: filteredBackups.length,
       };
     }
 
@@ -267,16 +240,11 @@ export class RegistryApiService {
         filteredBackups = enrichedBackups.filter(backup => backup.workspaceName === workspaceName);
       }
 
-      // Return paginated results
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const backups = filteredBackups.slice(startIndex, endIndex);
-
       return {
-        backups,
+        backups: filteredBackups,
         total: filteredBackups.length,
-        page,
-        perPage: pageSize,
+        page: 1,
+        perPage: filteredBackups.length,
       };
     } catch (e) {
       // On timeout, return cached results if available
@@ -290,15 +258,11 @@ export class RegistryApiService {
             );
           }
 
-          const startIndex = (page - 1) * pageSize;
-          const endIndex = startIndex + pageSize;
-          const backups = filteredBackups.slice(startIndex, endIndex);
-
           return {
-            backups,
+            backups: filteredBackups,
             total: filteredBackups.length,
-            page,
-            perPage: pageSize,
+            page: 1,
+            perPage: filteredBackups.length,
           };
         }
       }
