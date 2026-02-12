@@ -23,6 +23,7 @@ import { registerSwagger } from '@/plugins/swagger';
 import { registerWebSocket } from '@/plugins/webSocket';
 import { registerAirGapSampleRoute } from '@/routes/api/airGapSample';
 import { registerBackupRoutes } from '@/routes/api/backup';
+import { registerBackupJobWebSocket } from '@/routes/api/backupJobWebSocket';
 import { registerClusterConfigRoute } from '@/routes/api/clusterConfig';
 import { registerClusterInfoRoute } from '@/routes/api/clusterInfo';
 import { registerDataResolverRoute } from '@/routes/api/dataResolver';
@@ -145,5 +146,7 @@ export default async function buildApp(server: FastifyInstance): Promise<unknown
     registerAirGapSampleRoute(server),
 
     registerBackupRoutes(server),
+
+    registerBackupJobWebSocket(server),
   ]);
 }
