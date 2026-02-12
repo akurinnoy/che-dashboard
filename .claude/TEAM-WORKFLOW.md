@@ -121,6 +121,28 @@ SendMessage(type: shutdown_request, recipient: dev-alex-v2)
 
 ---
 
+## Parallel Work Strategy
+
+### CRITICAL: Developers Can Work Simultaneously
+
+**Git worktrees enable true parallel development** - multiple developers can work on different tasks at the same time without conflicts:
+
+✅ **DO assign tasks to multiple developers in parallel**
+✅ **DO use separate worktrees for each developer**
+✅ **DO have developers work independently on different branches**
+❌ **DON'T keep developers idle waiting for review slots**
+❌ **DON'T assume developers will conflict with each other**
+
+**Example:**
+- dev-sam-v3: Working on backend tests in `.worktrees/dev-sam-v3` (branch: dev-sam-v3/backend-tests)
+- dev-alex-v2: Working on WebSocket support in `.worktrees/dev-alex-v2` (branch: dev-alex-v2/websocket-support)
+- **NO CONFLICTS** - Different directories, different branches, different files
+
+**Team Lead Responsibility:**
+When developers are idle, assign them new tasks immediately. Don't reserve developers as "reviewers only" - they can both implement AND review.
+
+---
+
 ## Git Worktrees for Developer Isolation
 
 ### Why Separate Worktrees?
@@ -367,6 +389,19 @@ team-lead assigns to available developer
 - Check developer's task count (< 3)
 - Consider developer expertise
 - Balance workload across team
+- IMPORTANT: Assign tasks in parallel whenever possible
+- Each developer works in isolated worktree (no conflicts)
+- Don't keep developers idle waiting for review slots
+- Developers can both implement AND review
+```
+
+**Parallel Assignment Pattern:**
+```
+When multiple tasks available:
+1. Assign Task A to dev-sam-v3 (worktree: .worktrees/dev-sam-v3)
+2. Assign Task B to dev-alex-v2 (worktree: .worktrees/dev-alex-v2)
+3. Both work simultaneously without conflicts
+4. Team lead coordinates final integration
 ```
 
 ### 3. Implementation Phase
