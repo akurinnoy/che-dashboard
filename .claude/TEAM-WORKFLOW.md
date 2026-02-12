@@ -20,18 +20,30 @@
 
 **Note:** For Week 3-4 (Frontend UI Components), the team composition shifts to emphasize UI/UX design and security. Developers focus on implementation while designers provide mockups/patterns and security specialists conduct OWASP reviews.
 
-### Agent Respawn Policy
+### Agent Respawn Policy - EXPERIMENTAL (Temporarily Relaxed)
 
-**Developers (dev-*):**
-- Task limit: 3 tasks before respawn required
-- Numbering: Increment version on respawn (dev-sam → dev-sam-v2)
-- Reason: Prevent context accumulation and performance degradation
-- Technical note: This limit is empirically observed - agent performance degrades after ~3 complex tasks due to context accumulation (conversation history, code reads, test outputs). The exact mechanism may be token-based or attention-based, but the effect is consistent: quality and response time degrade noticeably after 3 substantial tasks.
+**CURRENT STATUS:** Respawn limits are **suspended** pending testing of tmux/iTerm2 mode context management.
 
-**QE Reviewers (qe-*):**
-- Review limit: 5 reviews before respawn required
-- Numbering: Increment version on respawn (qe-taylor → qe-taylor-v2)
-- Reason: Fresh perspective on code quality
+**Previous Policy (inline mode):**
+- **Developers (dev-*):** 3 tasks before respawn
+- **QE Reviewers (qe-*):** 5 reviews before respawn
+- **Reason:** Performance degraded after context accumulation (conversation history, code reads, test outputs)
+
+**New Experimental Policy (tmux/iTerm2 mode):**
+- **No fixed task limits** - let teammates run continuously
+- **Monitor for degradation signals:**
+  - Declining code quality or review thoroughness
+  - Slower response times or timeouts
+  - Context/memory errors in responses
+  - Inconsistent behavior or forgotten context
+- **Respawn on-demand** if degradation observed
+- **Track performance metrics** to establish empirical limits if needed
+
+**Why This Change:**
+- Observation: tmux/iTerm2 mode may provide automatic context management
+- Previous testing was in inline mode where `/compact` was unavailable
+- Need to verify whether respawn limits are actually necessary in tmux mode
+- If teammates perform well without respawning, we save time and preserve continuity
 
 **Team Lead:**
 - No fixed respawn limit
@@ -40,14 +52,36 @@
 - Manages all team coordination
 - Note: Team lead can run `/compact` to summarize and compress conversation history when approaching context limits, avoiding the need for respawn. This preserves institutional knowledge and project context.
 
-**Why Teammates Cannot Use `/compact`:**
-- **Tested and verified (2026-02-11)**: The `/compact` command is NOT available to spawned teammates
-- `/compact` is a CLI-level command only accessible in the main session (team-lead)
-- Spawned agents via Task tool do not have access to CLI commands
-- Error received: "Skill compact is not a prompt-based skill"
-- **Conclusion**: Respawn policy for teammates is necessary and cannot be eliminated
-- Only the team-lead session can use `/compact` for context management
-- Teammates must rely on respawn to reset accumulated context
+**Teammate Context Management - EXPERIMENTAL:**
+
+**IMPORTANT UPDATE (2026-02-11):** Respawn limits are now **OPTIONAL** pending further testing.
+
+**Observation:** In tmux/iTerm2 backend mode, teammates may have automatic context management capabilities that were not available in inline mode.
+
+**Experimental Approach:**
+1. **Let teammates run without respawn limits** to test if context degradation occurs
+2. **Monitor for signs of degradation:**
+   - Response quality decline
+   - Slower response times
+   - Memory/context errors
+   - Inconsistent behavior
+3. **Respawn only if needed** based on observed performance issues
+
+**Previous Testing (inline mode - 2026-02-11):**
+- `/compact` command was NOT available to spawned teammates
+- Spawned agents via Task tool did not have access to CLI commands
+- Error: "Skill compact is not a prompt-based skill"
+- Conclusion (for inline mode): Respawn was necessary
+
+**Current Hypothesis:**
+- tmux/iTerm2 mode may enable automatic context compaction for teammates
+- Respawn limits may be unnecessary in this mode
+- Need empirical testing to confirm
+
+**Respawn Guidelines (if needed):**
+- Watch for performance degradation signals
+- Respawn manually when quality declines
+- No fixed task/review limits until proven necessary
 
 ### Teammate Lifecycle Management
 
