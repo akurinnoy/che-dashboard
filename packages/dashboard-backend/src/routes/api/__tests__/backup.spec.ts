@@ -234,7 +234,7 @@ describe('Backup Routes', () => {
       const response = res.json();
 
       expect(response).toEqual(mockBackupList);
-      expect(mockListBackupImages).toHaveBeenCalledWith(namespace, undefined, undefined, undefined);
+      expect(mockListBackupImages).toHaveBeenCalledWith(namespace, undefined);
     });
 
     it('should list backup images with workspace name filter', async () => {
@@ -262,30 +262,7 @@ describe('Backup Routes', () => {
         .get(`${baseApiPath}/namespace/${namespace}/backups?workspaceName=${workspaceName}`);
 
       expect(res.statusCode).toEqual(200);
-      expect(mockListBackupImages).toHaveBeenCalledWith(
-        namespace,
-        workspaceName,
-        undefined,
-        undefined,
-      );
-    });
-
-    it('should list backup images with pagination', async () => {
-      const mockBackupList = {
-        backups: [],
-        total: 100,
-        page: 2,
-        perPage: 10,
-      };
-
-      mockListBackupImages.mockResolvedValue(mockBackupList);
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/backups?page=2&perPage=10`);
-
-      expect(res.statusCode).toEqual(200);
-      expect(mockListBackupImages).toHaveBeenCalledWith(namespace, undefined, 2, 10);
+      expect(mockListBackupImages).toHaveBeenCalledWith(namespace, workspaceName);
     });
 
     it('should return empty list when no backups exist', async () => {

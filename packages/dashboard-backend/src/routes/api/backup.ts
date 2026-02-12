@@ -41,16 +41,12 @@ const backupStatusParamsSchema = {
 
 interface IBackupListQuery {
   workspaceName?: string;
-  page?: number;
-  perPage?: number;
 }
 
 const backupListQuerySchema = {
   type: 'object',
   properties: {
     workspaceName: { type: 'string' },
-    page: { type: 'number' },
-    perPage: { type: 'number' },
   },
 } as const;
 
@@ -89,7 +85,7 @@ export function registerBackupRoutes(instance: FastifyInstance) {
       getSchema({ tags, params: namespacedSchema, querystring: backupListQuerySchema }),
       async function (request: FastifyRequest, reply: FastifyReply) {
         const { namespace } = request.params as restParams.INamespacedParams;
-        const { workspaceName, page, perPage } = request.query as IBackupListQuery;
+        const { workspaceName } = request.query as IBackupListQuery;
 
         // Layer 1: Input validation
         if (!namespace || namespace.trim() === '') {
@@ -104,7 +100,7 @@ export function registerBackupRoutes(instance: FastifyInstance) {
         const service = new RegistryApiService(kubeConfig, adapter);
 
         try {
-          const result = await service.listBackupImages(namespace, workspaceName, page, perPage);
+          const result = await service.listBackupImages(namespace, workspaceName);
           return result;
         } catch (error) {
           console.error('Backup listing failed:', error);
