@@ -377,7 +377,7 @@ describe('Jobs Routes', () => {
     });
 
     it('should list jobs with label selector', async () => {
-      const labelSelector = 'controller.devfile.io/devworkspace-name=my-workspace';
+      const labelSelector = 'controller.devfile.io/devworkspace_name=my-workspace';
       const mockJobs = {
         items: [
           {

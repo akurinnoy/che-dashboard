@@ -284,7 +284,6 @@ export const getDevWorkspaceClient = jest.fn(
             registry: 'image-registry.openshift-image-registry.svc:5000',
             authSecretName: 'registry-credentials',
           }),
-        triggerBackup: (_namespace, _workspaceName) => Promise.resolve({} as any),
         getBackupJobStatus: (_namespace, _jobName) => Promise.resolve({} as any),
         getWorkspaceBackupStatus: (_namespace, _workspaceName) => Promise.resolve({} as any),
         listBackupJobs: _namespace => Promise.resolve([]),

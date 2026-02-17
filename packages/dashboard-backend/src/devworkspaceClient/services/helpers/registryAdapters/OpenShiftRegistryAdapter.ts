@@ -131,7 +131,7 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
    *
    * Queries OpenShift ImageStream API to find all ImageStreams that represent
    * workspace backups. Images are identified by the presence of the
-   * DevWorkspace label (controller.devfile.io/devworkspace-name).
+   * DevWorkspace ID label (controller.devfile.io/devworkspace_id).
    *
    * @param namespace - Kubernetes namespace to query
    * @returns Promise resolving to array of backup images
@@ -153,20 +153,23 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
         `Registry query timeout for namespace ${namespace}`,
       );
 
-      const imageStreams = (response.body as { items: ImageStream[] }).items;
+      const imageStreams = (response as unknown as { items: ImageStream[] }).items;
 
       // Filter and map ImageStreams to backup images
       const backupImages: IBackupImage[] = [];
 
       for (const imageStream of imageStreams) {
-        // Check if ImageStream has DevWorkspace label
-        const workspaceName =
-          imageStream.metadata.labels?.[DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME];
+        // Check if ImageStream has DevWorkspace ID label (set by DWO BackupCronJob controller)
+        const workspaceId =
+          imageStream.metadata.labels?.[DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_ID];
 
-        if (!workspaceName) {
-          // Skip ImageStreams without workspace label
+        if (!workspaceId) {
+          // Skip ImageStreams without workspace ID label
           continue;
         }
+
+        // DWO names the ImageStream after the workspace
+        const workspaceName = imageStream.metadata.name;
 
         // Get the :latest tag information
         const latestTag = imageStream.status?.tags?.find(
@@ -298,16 +301,15 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
         `Registry query timeout for ImageStreamTag ${imageStreamTagName}`,
       );
 
-      const imageStreamTag = response.body as ImageStreamTag;
+      const imageStreamTag = response as unknown as ImageStreamTag;
 
       // Extract metadata from ImageStreamTag
       const sizeBytes = imageStreamTag.image.dockerImageMetadata.Size || 0;
       const labels = imageStreamTag.image.dockerImageMetadata.Config?.Labels || {};
 
-      // Get workspace name and namespace from labels
+      // DWO names ImageStreams after workspaces; use the ImageStream name as workspace name
       const workspaceName = labels[DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME] || name;
-      const workspaceNamespace =
-        labels[DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE] || namespace;
+      const workspaceNamespace = namespace;
 
       // Get timestamp from image metadata (creation time or backup label)
       const timestamp =

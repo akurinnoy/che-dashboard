@@ -19,18 +19,13 @@
  * service code (BackupApiService, RegistryApiService) execute,
  * verifying the full route → service → mock K8s API chain.
  *
- * Coverage targets:
- * - Pagination edge cases (boundary, beyond total, page size 1, max page size)
- * - Cache behavior (hits, misses, TTL expiration, cross-namespace isolation)
- * - Timeout scenarios (with and without cache fallback)
- * - SSRF protection (K8s DNS-1123 namespace validation)
- * - Error handling for all error paths
- * - Workspace existence enrichment
+ * The backup-status endpoint reads DevWorkspace annotations for status
+ * and optionally checks Jobs for in-progress detection.
  */
 
 import { BackupStatus } from '@eclipse-che/common';
 import * as k8s from '@kubernetes/client-node';
-import { V1Job, V1JobCondition, V1JobStatus } from '@kubernetes/client-node';
+import { V1Job, V1JobStatus } from '@kubernetes/client-node';
 import { FastifyInstance } from 'fastify';
 
 import { baseApiPath } from '@/constants/config';
@@ -99,7 +94,7 @@ jest.mock(
   }),
 );
 
-// Helper: Create a standard operator config response
+// Helper: Create a standard operator config response (no .body wrapper, matching k8s client v1.3.0)
 function createOperatorConfigResponse(overrides?: {
   enabled?: boolean;
   schedule?: string;
@@ -109,75 +104,41 @@ function createOperatorConfigResponse(overrides?: {
   serviceAccountName?: string;
 }) {
   return {
-    body: {
-      apiVersion: 'controller.devfile.io/v1alpha1',
-      kind: 'DevWorkspaceOperatorConfig',
-      metadata: { name: 'devworkspace-operator-config' },
-      config: {
-        workspace: {
-          backupCronJob: {
-            enabled: overrides?.enabled ?? true,
-            schedule: overrides?.schedule ?? '0 1 * * *',
-            registry: overrides?.registry ?? 'image-registry.openshift-image-registry.svc:5000',
-            authSecretName: overrides?.authSecretName,
-            image: overrides?.image ?? 'quay.io/eclipse/che-backup:latest',
-            serviceAccountName: overrides?.serviceAccountName ?? 'che-workspace',
-          },
+    apiVersion: 'controller.devfile.io/v1alpha1',
+    kind: 'DevWorkspaceOperatorConfig',
+    metadata: { name: 'devworkspace-operator-config' },
+    config: {
+      workspace: {
+        backupCronJob: {
+          enabled: overrides?.enabled ?? true,
+          schedule: overrides?.schedule ?? '0 1 * * *',
+          registry: overrides?.registry ?? 'image-registry.openshift-image-registry.svc:5000',
+          authSecretName: overrides?.authSecretName,
+          image: overrides?.image ?? 'quay.io/eclipse/che-backup:latest',
+          serviceAccountName: overrides?.serviceAccountName ?? 'che-workspace',
         },
       },
     },
   };
 }
 
-// Helper: Create a mock V1Job
-function createMockJob(options: {
-  name: string;
-  namespace: string;
-  workspaceName: string;
-  status: 'succeeded' | 'failed' | 'active' | 'pending';
-  startTime?: Date;
-  completionTime?: Date;
-  failureMessage?: string;
-}): V1Job {
-  const statusObj: V1JobStatus = {};
-
-  if (options.startTime) {
-    statusObj.startTime = options.startTime;
-  }
-  if (options.completionTime) {
-    statusObj.completionTime = options.completionTime;
-  }
-
-  switch (options.status) {
-    case 'succeeded':
-      statusObj.succeeded = 1;
-      break;
-    case 'failed':
-      statusObj.failed = 1;
-      statusObj.conditions = [
-        {
-          type: 'Failed',
-          status: 'True',
-          message: options.failureMessage || 'Job failed',
-        } as V1JobCondition,
-      ];
-      break;
-    case 'active':
-      statusObj.active = 1;
-      break;
-    case 'pending':
-      break;
-  }
-
+// Helper: Create a mock DevWorkspace resource (no .body wrapper, matching k8s client v1.3.0)
+function createMockDevWorkspace(
+  namespace: string,
+  workspaceName: string,
+  annotations: Record<string, string> = {},
+) {
   return {
+    apiVersion: 'workspace.devfile.io/v1alpha2',
+    kind: 'DevWorkspace',
     metadata: {
-      name: options.name,
-      namespace: options.namespace,
-      labels: {
-        'controller.devfile.io/devworkspace-name': options.workspaceName,
-      },
+      name: workspaceName,
+      namespace,
+      annotations,
     },
-    status: statusObj,
+    status: {
+      devworkspaceId: 'workspace-abc123',
+    },
   };
 }
 
@@ -185,6 +146,23 @@ describe('Backup API Integration Tests', () => {
   let app: FastifyInstance;
   const namespace = 'user-che';
   const workspaceName = 'my-workspace';
+  const registry = 'image-registry.openshift-image-registry.svc:5000';
+  const expectedImageUrl = `${registry}/${namespace}/${workspaceName}:latest`;
+
+  /**
+   * Set up getNamespacedCustomObject for backup-status tests.
+   * getWorkspaceBackupStatus calls getNamespacedCustomObject TWICE:
+   * 1st: operator config (getClusterBackupConfig)
+   * 2nd: DevWorkspace resource
+   */
+  function mockBackupStatusAPIs(
+    annotations: Record<string, string> = {},
+    operatorConfigOverrides?: Parameters<typeof createOperatorConfigResponse>[0],
+  ) {
+    mockCustomObjectAPI.getNamespacedCustomObject
+      .mockResolvedValueOnce(createOperatorConfigResponse(operatorConfigOverrides))
+      .mockResolvedValueOnce(createMockDevWorkspace(namespace, workspaceName, annotations));
+  }
 
   beforeAll(async () => {
     app = await setup();
@@ -201,30 +179,18 @@ describe('Backup API Integration Tests', () => {
   // ========================================================================
   // GET /api/namespace/:namespace/devworkspaces/:workspaceName/backup-status
   // Deep integration: route → BackupApiService → mock K8s APIs
+  // Now reads DevWorkspace annotations for status
   // ========================================================================
   describe('GET backup-status - Deep Integration', () => {
-    it('should return SUCCESS with full integration through BackupApiService', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(
-        createOperatorConfigResponse({
-          registry: 'image-registry.openshift-image-registry.svc:5000',
-          schedule: '0 1 * * *',
-        }),
+    it('should return SUCCESS with full integration through annotations', async () => {
+      mockBackupStatusAPIs(
+        {
+          'controller.devfile.io/last-backup-successful': 'true',
+          'controller.devfile.io/last-backup-finished-at': '2026-02-10T01:05:00Z',
+        },
+        { registry },
       );
-
-      const completionTime = new Date('2026-02-10T01:05:00Z');
-      const startTime = new Date('2026-02-10T01:00:00Z');
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-1234',
-            namespace,
-            workspaceName,
-            status: 'succeeded',
-            startTime,
-            completionTime,
-          }),
-        ],
-      });
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
         .inject()
@@ -234,18 +200,14 @@ describe('Backup API Integration Tests', () => {
       const response = res.json();
 
       expect(response.status).toBe(BackupStatus.SUCCESS);
-      expect(response.lastBackupTime).toBe(completionTime.toISOString());
-      expect(response.backupImageUrl).toBe(
-        `image-registry.openshift-image-registry.svc:5000/${namespace}/${workspaceName}:latest`,
-      );
+      expect(response.lastBackupTime).toBe('2026-02-10T01:05:00Z');
+      expect(response.backupImageUrl).toBe(expectedImageUrl);
       expect(response.nextScheduledBackup).toBeDefined();
       expect(response.nextScheduledBackup).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
 
-    it('should return NEVER when no backup jobs exist', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(
-        createOperatorConfigResponse({ schedule: '0 2 * * *' }),
-      );
+    it('should return NEVER when no backup annotations exist', async () => {
+      mockBackupStatusAPIs({}, { schedule: '0 2 * * *' });
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
@@ -257,24 +219,17 @@ describe('Backup API Integration Tests', () => {
 
       expect(response.status).toBe(BackupStatus.NEVER);
       expect(response.lastBackupTime).toBeUndefined();
-      expect(response.backupImageUrl).toBeUndefined();
       expect(response.nextScheduledBackup).toBeDefined();
     });
 
-    it('should return FAILED with error message from job conditions', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-1234',
-            namespace,
-            workspaceName,
-            status: 'failed',
-            startTime: new Date('2026-02-10T01:00:00Z'),
-            failureMessage: 'Pod failed with exit code 137: OOMKilled',
-          }),
-        ],
+    it('should return FAILED with error message from annotation', async () => {
+      mockBackupStatusAPIs({
+        'controller.devfile.io/last-backup-successful': 'false',
+        'controller.devfile.io/last-backup-finished-at': '2026-02-10T01:05:00Z',
+        'controller.devfile.io/last-backup-error':
+          'Pod failed with exit code 137: OOMKilled',
       });
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
         .inject()
@@ -287,19 +242,45 @@ describe('Backup API Integration Tests', () => {
       expect(response.error).toContain('OOMKilled');
     });
 
-    it('should return IN_PROGRESS for active job', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-1234',
-            namespace,
-            workspaceName,
-            status: 'active',
-            startTime: new Date('2026-02-10T01:00:00Z'),
-          }),
-        ],
+    it('should return FAILED with default error when no error annotation', async () => {
+      mockBackupStatusAPIs({
+        'controller.devfile.io/last-backup-successful': 'false',
+        'controller.devfile.io/last-backup-finished-at': '2026-02-10T01:05:00Z',
       });
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
+
+      const res = await app
+        .inject()
+        .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
+
+      expect(res.statusCode).toEqual(200);
+      const response = res.json();
+
+      expect(response.status).toBe(BackupStatus.FAILED);
+      expect(response.error).toBe('Last backup was not successful');
+    });
+
+    it('should return IN_PROGRESS for active job', async () => {
+      mockBackupStatusAPIs({
+        'controller.devfile.io/last-backup-successful': 'true',
+        'controller.devfile.io/last-backup-finished-at': '2026-02-09T01:05:00Z',
+      });
+
+      const activeJob: V1Job = {
+        metadata: {
+          name: 'backup-my-workspace-1234',
+          namespace,
+          labels: {
+            'controller.devfile.io/backup-job': 'true',
+            'controller.devfile.io/devworkspace_name': workspaceName,
+          },
+        },
+        status: {
+          active: 1,
+          startTime: new Date('2026-02-10T01:00:00Z'),
+        } as V1JobStatus,
+      };
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [activeJob] });
 
       const res = await app
         .inject()
@@ -309,77 +290,12 @@ describe('Backup API Integration Tests', () => {
       const response = res.json();
 
       expect(response.status).toBe(BackupStatus.IN_PROGRESS);
-      expect(response.lastBackupTime).toBeDefined();
+      expect(response.lastBackupTime).toBe('2026-02-09T01:05:00Z');
       expect(response.backupImageUrl).toBeDefined();
     });
 
-    it('should select most recent job when multiple jobs exist', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-
-      const olderCompletionTime = new Date('2026-02-09T01:05:00Z');
-      const newerCompletionTime = new Date('2026-02-10T01:05:00Z');
-
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-old',
-            namespace,
-            workspaceName,
-            status: 'succeeded',
-            startTime: new Date('2026-02-09T01:00:00Z'),
-            completionTime: olderCompletionTime,
-          }),
-          createMockJob({
-            name: 'backup-my-workspace-new',
-            namespace,
-            workspaceName,
-            status: 'succeeded',
-            startTime: new Date('2026-02-10T01:00:00Z'),
-            completionTime: newerCompletionTime,
-          }),
-        ],
-      });
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.status).toBe(BackupStatus.SUCCESS);
-      expect(response.lastBackupTime).toBe(newerCompletionTime.toISOString());
-    });
-
-    it('should return IN_PROGRESS for job with no status counters', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-pending',
-            namespace,
-            workspaceName,
-            status: 'pending',
-            startTime: new Date('2026-02-10T01:00:00Z'),
-          }),
-        ],
-      });
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.status).toBe(BackupStatus.IN_PROGRESS);
-    });
-
     it('should handle invalid cron expression gracefully', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(
-        createOperatorConfigResponse({ schedule: 'not-a-valid-cron' }),
-      );
+      mockBackupStatusAPIs({}, { schedule: 'not-a-valid-cron' });
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
@@ -394,9 +310,7 @@ describe('Backup API Integration Tests', () => {
     });
 
     it('should handle empty cron schedule', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(
-        createOperatorConfigResponse({ schedule: '' }),
-      );
+      mockBackupStatusAPIs({}, { schedule: '' });
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
@@ -410,7 +324,8 @@ describe('Backup API Integration Tests', () => {
     });
 
     it('should return 500 when operator config API fails', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockRejectedValue(
+      // getClusterBackupConfig calls getNamespacedCustomObject for operator config
+      mockCustomObjectAPI.getNamespacedCustomObject.mockRejectedValue(
         new Error('Unable to connect to API server'),
       );
 
@@ -421,9 +336,11 @@ describe('Backup API Integration Tests', () => {
       expect(res.statusCode).toEqual(500);
     });
 
-    it('should return 500 when job listing API fails', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-      mockBatchV1API.listNamespacedJob.mockRejectedValue(new Error('RBAC: access denied'));
+    it('should return 500 when DevWorkspace API fails', async () => {
+      // 1st call (operator config) succeeds, 2nd call (DevWorkspace) fails
+      mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce(createOperatorConfigResponse())
+        .mockRejectedValueOnce(new Error('DevWorkspace not found'));
 
       const res = await app
         .inject()
@@ -433,7 +350,7 @@ describe('Backup API Integration Tests', () => {
     });
 
     it('should pass correct label selector to job list API', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
+      mockBackupStatusAPIs({});
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       await app
@@ -442,35 +359,37 @@ describe('Backup API Integration Tests', () => {
 
       expect(mockBatchV1API.listNamespacedJob).toHaveBeenCalledWith({
         namespace,
-        labelSelector: `controller.devfile.io/devworkspace-name=${workspaceName}`,
+        labelSelector: `controller.devfile.io/backup-job=true,controller.devfile.io/devworkspace_name=${workspaceName}`,
       });
     });
 
     it('should pass correct parameters to operator config API', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
+      mockBackupStatusAPIs({});
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       await app
         .inject()
         .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
 
-      expect(mockCustomObjectAPI.getClusterCustomObject).toHaveBeenCalledWith({
+      // getClusterBackupConfig calls getNamespacedCustomObject (1st call)
+      expect(mockCustomObjectAPI.getNamespacedCustomObject).toHaveBeenNthCalledWith(1, {
         group: 'controller.devfile.io',
         version: 'v1alpha1',
+        namespace: 'openshift-operators',
         plural: 'devworkspaceoperatorconfigs',
         name: 'devworkspace-operator-config',
       });
     });
 
     it('should handle backup config with no workspace section', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue({
-        body: {
+      mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce({
           apiVersion: 'controller.devfile.io/v1alpha1',
           kind: 'DevWorkspaceOperatorConfig',
           metadata: { name: 'devworkspace-operator-config' },
           config: {},
-        },
-      });
+        })
+        .mockResolvedValueOnce(createMockDevWorkspace(namespace, workspaceName, {}));
       mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
@@ -484,55 +403,15 @@ describe('Backup API Integration Tests', () => {
       expect(response.nextScheduledBackup).toBeUndefined();
     });
 
-    it('should handle FAILED job with no conditions', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(createOperatorConfigResponse());
-
-      const failedJob: V1Job = {
-        metadata: {
-          name: 'backup-my-workspace-1234',
-          namespace,
-          labels: {
-            'controller.devfile.io/devworkspace-name': workspaceName,
-          },
-        },
-        status: {
-          failed: 1,
-          startTime: new Date('2026-02-10T01:00:00Z'),
-        } as V1JobStatus,
-      };
-
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [failedJob],
-      });
-
-      const res = await app
-        .inject()
-        .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
-
-      expect(res.statusCode).toEqual(200);
-      const response = res.json();
-
-      expect(response.status).toBe(BackupStatus.FAILED);
-      expect(response.error).toBe('Backup job failed');
-    });
-
     it('should not include backupImageUrl when registry is empty', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockResolvedValue(
-        createOperatorConfigResponse({ registry: '' }),
+      mockBackupStatusAPIs(
+        {
+          'controller.devfile.io/last-backup-successful': 'true',
+          'controller.devfile.io/last-backup-finished-at': '2026-02-10T01:05:00Z',
+        },
+        { registry: '' },
       );
-
-      mockBatchV1API.listNamespacedJob.mockResolvedValue({
-        items: [
-          createMockJob({
-            name: 'backup-my-workspace-1234',
-            namespace,
-            workspaceName,
-            status: 'succeeded',
-            startTime: new Date('2026-02-10T01:00:00Z'),
-            completionTime: new Date('2026-02-10T01:05:00Z'),
-          }),
-        ],
-      });
+      mockBatchV1API.listNamespacedJob.mockResolvedValue({ items: [] });
 
       const res = await app
         .inject()
@@ -543,6 +422,24 @@ describe('Backup API Integration Tests', () => {
 
       expect(response.status).toBe(BackupStatus.SUCCESS);
       expect(response.backupImageUrl).toBeUndefined();
+    });
+
+    it('should gracefully handle Job API failure and use annotations', async () => {
+      mockBackupStatusAPIs({
+        'controller.devfile.io/last-backup-successful': 'true',
+        'controller.devfile.io/last-backup-finished-at': '2026-02-10T01:05:00Z',
+      });
+      mockBatchV1API.listNamespacedJob.mockRejectedValue(new Error('RBAC: access denied'));
+
+      const res = await app
+        .inject()
+        .get(`${baseApiPath}/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`);
+
+      expect(res.statusCode).toEqual(200);
+      const response = res.json();
+
+      // Should still return annotation-based status despite Job API failure
+      expect(response.status).toBe(BackupStatus.SUCCESS);
     });
   });
 
@@ -986,7 +883,7 @@ describe('Backup API Integration Tests', () => {
   // ========================================================================
   describe('Response Format Consistency', () => {
     it('should return consistent error format for backup-status 500', async () => {
-      mockCustomObjectAPI.getClusterCustomObject.mockRejectedValue(new Error('Connection refused'));
+      mockCustomObjectAPI.getNamespacedCustomObject.mockRejectedValue(new Error('Connection refused'));
 
       const res = await app
         .inject()

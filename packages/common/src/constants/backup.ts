@@ -115,6 +115,12 @@ export const BACKUP_STATUS_ICONS = {
  * DevWorkspace annotation keys for backup/restore
  */
 export const DEVWORKSPACE_BACKUP_ANNOTATIONS = {
+  /** Whether the last backup succeeded ("true" or "false"), set by DWO BackupCronJob controller */
+  LAST_BACKUP_SUCCESSFUL: 'controller.devfile.io/last-backup-successful',
+  /** ISO timestamp of when the last backup finished, set by DWO BackupCronJob controller */
+  LAST_BACKUP_FINISHED_AT: 'controller.devfile.io/last-backup-finished-at',
+  /** Error message from last backup failure, set by DWO BackupCronJob controller */
+  LAST_BACKUP_ERROR: 'controller.devfile.io/last-backup-error',
   /** Indicates workspace should be restored from backup */
   RESTORE_WORKSPACE: 'controller.devfile.io/restore-workspace',
   /** Specifies the backup image URL to restore from */
@@ -122,13 +128,17 @@ export const DEVWORKSPACE_BACKUP_ANNOTATIONS = {
 } as const;
 
 /**
- * DevWorkspace label keys for backup jobs
+ * DevWorkspace label keys for backup jobs.
+ * These must match the labels set by DWO BackupCronJob controller
+ * (see pkg/constants/metadata.go in devworkspace-operator).
  */
 export const DEVWORKSPACE_BACKUP_LABELS = {
-  /** Label on backup Job indicating the workspace name */
-  WORKSPACE_NAME: 'controller.devfile.io/devworkspace-name',
-  /** Label on backup Job indicating the workspace namespace */
-  WORKSPACE_NAMESPACE: 'controller.devfile.io/devworkspace-namespace',
+  /** Label on backup Job indicating the workspace name (DWO: DevWorkspaceNameLabel) */
+  WORKSPACE_NAME: 'controller.devfile.io/devworkspace_name',
+  /** Label on backup Job/ImageStream indicating the workspace ID (DWO: DevWorkspaceIDLabel) */
+  WORKSPACE_ID: 'controller.devfile.io/devworkspace_id',
+  /** Label on backup Job indicating it is a DWO-managed backup (DWO: DevWorkspaceBackupJobLabel) */
+  DEVWORKSPACE_BACKUP: 'controller.devfile.io/backup-job',
 } as const;
 
 /**

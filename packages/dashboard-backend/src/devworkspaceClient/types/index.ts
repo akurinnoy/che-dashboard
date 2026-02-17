@@ -17,6 +17,7 @@ import {
   V230DevfileComponents,
 } from '@devfile/api';
 import { api, Architecture } from '@eclipse-che/common';
+import { BackupConfig, BackupInfo } from '@eclipse-che/common/src/types';
 import * as k8s from '@kubernetes/client-node';
 import { IncomingHttpHeaders } from 'http';
 
@@ -582,25 +583,20 @@ export interface IBackupApi {
   /**
    * Get cluster-wide backup configuration
    */
-  getClusterBackupConfig(): Promise<any>;
-
-  /**
-   * Trigger an on-demand backup for a workspace
-   */
-  triggerBackup(namespace: string, workspaceName: string): Promise<any>;
+  getClusterBackupConfig(): Promise<BackupConfig>;
 
   /**
    * Get the status of a specific backup job
    */
-  getBackupJobStatus(namespace: string, jobName: string): Promise<any>;
+  getBackupJobStatus(namespace: string, jobName: string): Promise<k8s.V1Job>;
 
   /**
    * Get backup status for a specific workspace
    */
-  getWorkspaceBackupStatus(namespace: string, workspaceName: string): Promise<any>;
+  getWorkspaceBackupStatus(namespace: string, workspaceName: string): Promise<BackupInfo>;
 
   /**
    * List all backup jobs in a namespace
    */
-  listBackupJobs(namespace: string): Promise<any[]>;
+  listBackupJobs(namespace: string): Promise<k8s.V1Job[]>;
 }

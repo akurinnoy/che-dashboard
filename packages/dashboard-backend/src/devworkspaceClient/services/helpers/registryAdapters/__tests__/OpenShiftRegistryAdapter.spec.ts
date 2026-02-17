@@ -28,6 +28,7 @@ import { OpenShiftRegistryAdapter } from '@/devworkspaceClient/services/helpers/
 
 const namespace = 'user-che';
 const workspaceName = 'my-workspace';
+const workspaceId = 'workspace1234567890';
 const imageUrl = `${OPENSHIFT_INTERNAL_REGISTRY_HOSTNAME}:${OPENSHIFT_INTERNAL_REGISTRY_PORT}/${namespace}/${workspaceName}:${BACKUP_IMAGE_DEFAULT_TAG}`;
 
 describe('OpenShiftRegistryAdapter', () => {
@@ -41,8 +42,7 @@ describe('OpenShiftRegistryAdapter', () => {
       name: workspaceName,
       namespace,
       labels: {
-        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
-        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE]: namespace,
+        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_ID]: workspaceId,
       },
     },
     spec: {},
@@ -70,8 +70,7 @@ describe('OpenShiftRegistryAdapter', () => {
       name: `${workspaceName}:${BACKUP_IMAGE_DEFAULT_TAG}`,
       namespace,
       labels: {
-        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
-        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE]: namespace,
+        [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_ID]: workspaceId,
       },
     },
     image: {
@@ -80,7 +79,6 @@ describe('OpenShiftRegistryAdapter', () => {
         Config: {
           Labels: {
             [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
-            [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE]: namespace,
             'backup.timestamp': '2026-02-10T12:00:00Z',
           },
         },
@@ -95,13 +93,9 @@ describe('OpenShiftRegistryAdapter', () => {
   beforeEach(() => {
     stubCustomObjectsApi = {
       listNamespacedCustomObject: jest.fn().mockResolvedValue({
-        body: {
-          items: [mockImageStream],
-        },
+        items: [mockImageStream],
       }),
-      getNamespacedCustomObject: jest.fn().mockResolvedValue({
-        body: mockImageStreamTag,
-      }),
+      getNamespacedCustomObject: jest.fn().mockResolvedValue(mockImageStreamTag),
     } as unknown as CustomObjectsApi;
 
     const { KubeConfig } = mockClient;
@@ -127,7 +121,6 @@ describe('OpenShiftRegistryAdapter', () => {
         sizeBytes: 1024000,
         labels: {
           [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
-          [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE]: namespace,
           'backup.timestamp': '2026-02-10T12:00:00Z',
         },
       });
@@ -158,9 +151,7 @@ describe('OpenShiftRegistryAdapter', () => {
       };
 
       stubCustomObjectsApi.listNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: {
-          items: [imageStreamWithoutLabel],
-        },
+        items: [imageStreamWithoutLabel],
       });
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
@@ -183,9 +174,7 @@ describe('OpenShiftRegistryAdapter', () => {
       };
 
       stubCustomObjectsApi.listNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: {
-          items: [imageStreamWithoutLatest],
-        },
+        items: [imageStreamWithoutLatest],
       });
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
@@ -195,9 +184,7 @@ describe('OpenShiftRegistryAdapter', () => {
 
     it('should handle empty ImageStream list', async () => {
       stubCustomObjectsApi.listNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: {
-          items: [],
-        },
+        items: [],
       });
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
@@ -220,9 +207,7 @@ describe('OpenShiftRegistryAdapter', () => {
       };
 
       stubCustomObjectsApi.listNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: {
-          items: [imageStreamWithEmptyItems],
-        },
+        items: [imageStreamWithEmptyItems],
       });
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
@@ -237,9 +222,7 @@ describe('OpenShiftRegistryAdapter', () => {
       };
 
       stubCustomObjectsApi.listNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: {
-          items: [imageStreamWithoutStatus],
-        },
+        items: [imageStreamWithoutStatus],
       });
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
@@ -262,9 +245,9 @@ describe('OpenShiftRegistryAdapter', () => {
         },
       };
 
-      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: imageStreamTagWithoutSize,
-      });
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagWithoutSize,
+      );
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
 
@@ -283,9 +266,9 @@ describe('OpenShiftRegistryAdapter', () => {
         },
       };
 
-      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue({
-        body: imageStreamTagWithoutLabels,
-      });
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagWithoutLabels,
+      );
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
 
@@ -321,7 +304,6 @@ describe('OpenShiftRegistryAdapter', () => {
         sizeBytes: 1024000,
         labels: {
           [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
-          [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAMESPACE]: namespace,
           'backup.timestamp': '2026-02-10T12:00:00Z',
         },
       });
