@@ -19,6 +19,7 @@ import EditorSelector from '@/components/EditorSelector';
 import Head from '@/components/Head';
 import ImportFromGit from '@/components/ImportFromGit';
 import { Spacer } from '@/components/Spacer';
+import RestoreFromBackup from '@/pages/GetStarted/RestoreFromBackup';
 import SamplesList from '@/pages/GetStarted/SamplesList';
 import { ROUTE } from '@/Routes';
 import { RootState } from '@/store';
@@ -115,6 +116,10 @@ export class GetStarted extends React.PureComponent<Props, State> {
             editorImage={editorImage}
             presetFilter={presetFilter}
           />
+
+          <Spacer />
+
+          <RestoreFromBackup />
         </PageSection>
       </React.Fragment>
     );

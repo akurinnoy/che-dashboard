@@ -18,6 +18,8 @@ import {
   PageSectionVariants,
   Text,
   TextContent,
+  ToggleGroup,
+  ToggleGroupItem,
 } from '@patternfly/react-core';
 import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import {
@@ -36,6 +38,7 @@ import React from 'react';
 import { Location, NavigateFunction } from 'react-router-dom';
 
 import Head from '@/components/Head';
+import BackupsView from '@/pages/WorkspacesList/BackupsView';
 import NothingFoundEmptyState from '@/pages/WorkspacesList/EmptyState/NothingFound';
 import NoWorkspacesEmptyState from '@/pages/WorkspacesList/EmptyState/NoWorkspaces';
 import styles from '@/pages/WorkspacesList/index.module.css';
@@ -53,6 +56,8 @@ type Props = {
   navigate: NavigateFunction;
   workspaces: Workspace[];
 };
+type ViewMode = 'workspaces' | 'backups';
+
 type State = {
   filtered: string[]; // UIDs of filtered workspaces
   selected: string[]; // UIDs of selected workspaces
@@ -62,6 +67,7 @@ type State = {
     index: number;
     direction: SortByDirection;
   };
+  viewMode: ViewMode;
 };
 
 export default class WorkspacesList extends React.PureComponent<Props, State> {
@@ -131,6 +137,7 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
         index: 3, // Last Modified column
         direction: SortByDirection.asc,
       },
+      viewMode: 'workspaces',
     };
   }
 
@@ -238,10 +245,14 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
     }
   }
 
+  private handleViewModeChange(viewMode: ViewMode): void {
+    this.setState({ viewMode });
+  }
+
   public render(): React.ReactElement {
-    const { workspaces } = this.props;
+    const { navigate, workspaces } = this.props;
     const { workspace: workspacesDocsLink } = this.props.branding.docs;
-    const { selected, isSelectedAll, sortBy } = this.state;
+    const { selected, isSelectedAll, sortBy, viewMode } = this.state;
     const rows = this.buildRows();
 
     const toolbar = (
@@ -280,32 +291,52 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
               </a>
             </Text>
           </TextContent>
+          <ToggleGroup aria-label="View toggle" className="pf-u-mt-md">
+            <ToggleGroupItem
+              text="Active Workspaces"
+              buttonId="view-workspaces"
+              isSelected={viewMode === 'workspaces'}
+              onChange={() => this.handleViewModeChange('workspaces')}
+            />
+            <ToggleGroupItem
+              text="Backups"
+              buttonId="view-backups"
+              isSelected={viewMode === 'backups'}
+              onChange={() => this.handleViewModeChange('backups')}
+            />
+          </ToggleGroup>
         </PageSection>
-        <PageSection
-          padding={{ default: 'noPadding' }}
-          variant={PageSectionVariants.light}
-          isFilled={false}
-        >
-          <Divider component="div" className="pf-u-mt-xl" />
-          <Table
-            aria-label="Workspaces List Table"
-            canSelectAll={false}
-            cells={this.columns}
-            onSelect={(event, isSelected, rowIndex, rowData) => {
-              event.stopPropagation();
-              this.handleSelect(isSelected, rowIndex, rowData);
-            }}
-            rows={rows}
-            variant={TableVariant.compact}
-            header={toolbar}
-            sortBy={sortBy}
-            onSort={(event, index, direction) => this.handleSort(event, index, direction)}
-          >
-            <TableHeader />
-            <TableBody />
-          </Table>
-        </PageSection>
-        {emptyState}
+        {viewMode === 'backups' ? (
+          <BackupsView navigate={navigate} />
+        ) : (
+          <>
+            <PageSection
+              padding={{ default: 'noPadding' }}
+              variant={PageSectionVariants.light}
+              isFilled={false}
+            >
+              <Divider component="div" className="pf-u-mt-xl" />
+              <Table
+                aria-label="Workspaces List Table"
+                canSelectAll={false}
+                cells={this.columns}
+                onSelect={(event, isSelected, rowIndex, rowData) => {
+                  event.stopPropagation();
+                  this.handleSelect(isSelected, rowIndex, rowData);
+                }}
+                rows={rows}
+                variant={TableVariant.compact}
+                header={toolbar}
+                sortBy={sortBy}
+                onSort={(event, index, direction) => this.handleSort(event, index, direction)}
+              >
+                <TableHeader />
+                <TableBody />
+              </Table>
+            </PageSection>
+            {emptyState}
+          </>
+        )}
       </React.Fragment>
     );
   }
