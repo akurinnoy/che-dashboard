@@ -65,8 +65,33 @@ The backend uses `@kubernetes/client-node` to interact with Kubernetes APIs:
 - **Test coverage**: New features should include tests
 - **Copyright headers**: All source files must have EPL-2.0 headers
 
+## Backup/Restore Architecture
+
+The dashboard integrates with the DevWorkspace Operator's backup system. See `./BACKUP_ARCHITECTURE.md` for full details.
+
+### Key Points for AI Agents
+
+- **DWO does NOT create Kubernetes CronJobs.** It uses an in-process cron scheduler (`robfig/cron/v3`) that creates `batch/v1.Job` resources on-demand.
+- **Backup status is stored in DevWorkspace annotations**, not in separate CRDs:
+  - `controller.devfile.io/last-backup-successful`: `"true"` / `"false"`
+  - `controller.devfile.io/last-backup-finished-at`: ISO 8601 timestamp
+  - `controller.devfile.io/last-backup-error`: error message (if failed)
+- **Backup Jobs are ephemeral** (TTL: 120s after completion). Use annotations for historical status.
+- **Restore uses DevWorkspace attributes**: `controller.devfile.io/restore-workspace: "true"` and optionally `controller.devfile.io/restore-source-image`.
+- **Only `:latest` tag is supported** - no backup versioning in MVP.
+- **OpenShift-only** for MVP - ImageStream API for backup image discovery.
+
+### Backup-Related Code Locations
+
+- Backend service: `packages/dashboard-backend/src/devworkspaceClient/services/backupApi.ts`
+- Backend routes: `packages/dashboard-backend/src/routes/api/backup.ts`
+- Backend WebSocket: `packages/dashboard-backend/src/routes/api/backupJobWebSocket.ts`
+- Frontend API client: `packages/dashboard-frontend/src/services/backend-client/backupApi.ts`
+- Redux store: `packages/dashboard-frontend/src/store/Backups/`
+- UI components: `BackupStatusBadge`, `BackupTab`, `BackupsView`, `RestoreFromBackup`
+- Shared types: `packages/common/src/types/backup.ts`
+- Shared constants: `packages/common/src/constants/backup.ts`
+
 ## Red Hat Compliance and Responsible AI Rules
 
 See `./redhat-compliance-and-responsible-ai.md` and the Cursor rules file under `./.cursor/rules/`.
-
-
