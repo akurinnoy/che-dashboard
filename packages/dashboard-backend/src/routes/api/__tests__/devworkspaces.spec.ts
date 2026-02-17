@@ -94,7 +94,7 @@ describe('DevWorkspaces Routes', () => {
 
     const createdDevWorkspace = mockCreate.mock.calls[0][0];
     expect(
-      createdDevWorkspace.metadata?.annotations?.[
+      createdDevWorkspace.spec?.template?.attributes?.[
         DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
       ],
     ).toEqual('true');
@@ -134,12 +134,12 @@ describe('DevWorkspaces Routes', () => {
 
     const createdDevWorkspace = mockCreate.mock.calls[0][0];
     expect(
-      createdDevWorkspace.metadata?.annotations?.[
+      createdDevWorkspace.spec?.template?.attributes?.[
         DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
       ],
     ).toEqual('true');
     expect(
-      createdDevWorkspace.metadata?.annotations?.[
+      createdDevWorkspace.spec?.template?.attributes?.[
         DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
       ],
     ).toEqual(backupImageUrl);
@@ -175,7 +175,7 @@ describe('DevWorkspaces Routes', () => {
 
     const createdDevWorkspace = mockCreate.mock.calls[0][0];
     expect(
-      createdDevWorkspace.metadata?.annotations?.[
+      createdDevWorkspace.spec?.template?.attributes?.[
         DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_WORKSPACE
       ],
     ).toBeUndefined();
@@ -252,7 +252,7 @@ describe('DevWorkspaces Routes', () => {
 
       const createdDevWorkspace = mockCreate.mock.calls[0][0];
       expect(
-        createdDevWorkspace.metadata?.annotations?.[
+        createdDevWorkspace.spec?.template?.attributes?.[
           DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
         ],
       ).toEqual('image-registry.openshift-image-registry.svc:5000/user-che/my-workspace:latest');
@@ -339,7 +339,7 @@ describe('DevWorkspaces Routes', () => {
       expect(res.statusCode).toEqual(200);
       const createdDevWorkspace = mockCreate.mock.calls[0][0];
       expect(
-        createdDevWorkspace.metadata?.annotations?.[
+        createdDevWorkspace.spec?.template?.attributes?.[
           DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
         ],
       ).toEqual(validUrl);
@@ -445,7 +445,7 @@ describe('DevWorkspaces Routes', () => {
       expect(res.statusCode).toEqual(200);
       const createdDevWorkspace = mockCreate.mock.calls[0][0];
       expect(
-        createdDevWorkspace.metadata?.annotations?.[
+        createdDevWorkspace.spec?.template?.attributes?.[
           DEVWORKSPACE_BACKUP_ANNOTATIONS.RESTORE_SOURCE_IMAGE
         ],
       ).toEqual(validUrl);
