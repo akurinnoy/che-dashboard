@@ -12,7 +12,10 @@
 
 import 'reflect-metadata';
 
+import { BackupInfo } from '@eclipse-che/common';
 import {
+  Button,
+  ButtonVariant,
   Divider,
   PageSection,
   PageSectionVariants,
@@ -46,10 +49,14 @@ import { buildRows, RowData } from '@/pages/WorkspacesList/Rows';
 import WorkspacesListToolbar from '@/pages/WorkspacesList/Toolbar';
 import { BrandingData } from '@/services/bootstrap/branding.constant';
 import devfileApi from '@/services/devfileApi';
-import { buildGettingStartedLocation } from '@/services/helpers/location';
+import {
+  buildGettingStartedLocation,
+  buildRestoreFromBackupLocation,
+} from '@/services/helpers/location';
 import { Workspace } from '@/services/workspace-adapter';
 
 type Props = {
+  backupsByWorkspace: Record<string, BackupInfo>;
   branding: BrandingData;
   editors: devfileApi.Devfile[];
   location: Location;
@@ -91,6 +98,10 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
         title: 'Last Modified',
         dataLabel: 'Last Modified',
         transforms: [sortable, classNames(styles.lastModifiedColumnTitle)],
+      },
+      {
+        title: 'Backup Status',
+        dataLabel: 'Backup Status',
       },
       {
         title: 'Project(s)',
@@ -142,10 +153,10 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
   }
 
   private buildRows(): RowData[] {
-    const { editors, workspaces } = this.props;
+    const { backupsByWorkspace, editors, workspaces } = this.props;
     const { filtered, selected, sortBy } = this.state;
 
-    return buildRows(workspaces, editors, [], filtered, selected, sortBy);
+    return buildRows(workspaces, editors, [], filtered, selected, sortBy, backupsByWorkspace);
   }
 
   private handleFilter(filtered: Workspace[]): void {
@@ -205,6 +216,11 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
 
   private handleAddWorkspace(): void {
     const location = buildGettingStartedLocation();
+    this.props.navigate(location);
+  }
+
+  private handleRestoreFromBackup(): void {
+    const location = buildRestoreFromBackupLocation();
     this.props.navigate(location);
   }
 
@@ -291,20 +307,29 @@ export default class WorkspacesList extends React.PureComponent<Props, State> {
               </a>
             </Text>
           </TextContent>
-          <ToggleGroup aria-label="View toggle" className="pf-u-mt-md">
-            <ToggleGroupItem
-              text="Active Workspaces"
-              buttonId="view-workspaces"
-              isSelected={viewMode === 'workspaces'}
-              onChange={() => this.handleViewModeChange('workspaces')}
-            />
-            <ToggleGroupItem
-              text="Backups"
-              buttonId="view-backups"
-              isSelected={viewMode === 'backups'}
-              onChange={() => this.handleViewModeChange('backups')}
-            />
-          </ToggleGroup>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <ToggleGroup aria-label="View toggle" className="pf-u-mt-md">
+              <ToggleGroupItem
+                text="Active Workspaces"
+                buttonId="view-workspaces"
+                isSelected={viewMode === 'workspaces'}
+                onChange={() => this.handleViewModeChange('workspaces')}
+              />
+              <ToggleGroupItem
+                text="Backups"
+                buttonId="view-backups"
+                isSelected={viewMode === 'backups'}
+                onChange={() => this.handleViewModeChange('backups')}
+              />
+            </ToggleGroup>
+            <Button
+              variant={ButtonVariant.secondary}
+              onClick={() => this.handleRestoreFromBackup()}
+              data-testid="restore-from-backup-button"
+            >
+              Restore Workspace
+            </Button>
+          </div>
         </PageSection>
         {viewMode === 'backups' ? (
           <BackupsView navigate={navigate} />

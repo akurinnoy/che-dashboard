@@ -29,7 +29,7 @@ describe('Backups, reducer', () => {
       byWorkspace: {},
       byNamespace: {},
       loading: {
-        isLoading: false,
+        loadingCount: 0,
         isUpdating: false,
         isValidating: false,
       },
@@ -51,10 +51,10 @@ describe('Backups, reducer', () => {
   });
 
   it('should have properly typed loading state', () => {
-    expect(initialState.loading).toHaveProperty('isLoading');
+    expect(initialState.loading).toHaveProperty('loadingCount');
     expect(initialState.loading).toHaveProperty('isUpdating');
     expect(initialState.loading).toHaveProperty('isValidating');
-    expect(typeof initialState.loading.isLoading).toBe('boolean');
+    expect(typeof initialState.loading.loadingCount).toBe('number');
     expect(typeof initialState.loading.isUpdating).toBe('boolean');
     expect(typeof initialState.loading.isValidating).toBe('boolean');
   });
@@ -73,8 +73,8 @@ describe('Backups, reducer', () => {
     expect(initialState.error).toBeUndefined();
   });
 
-  it('should initialize with all loading states false', () => {
-    expect(initialState.loading.isLoading).toBe(false);
+  it('should initialize with all loading states at zero/false', () => {
+    expect(initialState.loading.loadingCount).toBe(0);
     expect(initialState.loading.isUpdating).toBe(false);
     expect(initialState.loading.isValidating).toBe(false);
   });
@@ -103,7 +103,7 @@ describe('Backups, reducer', () => {
         },
         byNamespace: {},
         loading: {
-          isLoading: false,
+          loadingCount: 0,
           isUpdating: false,
           isValidating: false,
         },
@@ -130,7 +130,7 @@ describe('Backups, reducer', () => {
           ],
         },
         loading: {
-          isLoading: false,
+          loadingCount: 0,
           isUpdating: false,
           isValidating: false,
         },
@@ -142,22 +142,4 @@ describe('Backups, reducer', () => {
     });
   });
 
-  describe('Future async thunk actions (Task #11)', () => {
-    it('should be ready to handle fetchBackupStatus actions', () => {
-      // Placeholder test - will be implemented in Task #11
-      // This ensures the reducer structure is ready for async thunks
-      expect(reducer).toBeDefined();
-      expect(typeof reducer).toBe('function');
-    });
-
-    it('should be ready to handle fetchBackupList actions', () => {
-      // Placeholder test - will be implemented in Task #11
-      expect(reducer).toBeDefined();
-    });
-
-    it('should be ready to handle validateBackupImage actions', () => {
-      // Placeholder test - will be implemented in Task #11
-      expect(reducer).toBeDefined();
-    });
-  });
 });

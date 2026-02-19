@@ -61,7 +61,7 @@ describe('Backup Store Integration', () => {
       expect(state.backups.byWorkspace).toEqual({});
       expect(state.backups.byNamespace).toEqual({});
       expect(state.backups.loading).toEqual({
-        isLoading: false,
+        loadingCount: 0,
         isUpdating: false,
         isValidating: false,
       });
@@ -92,7 +92,7 @@ describe('Backup Store Integration', () => {
       const loading = selectBackupsLoading(state);
 
       expect(loading).toEqual({
-        isLoading: false,
+        loadingCount: 0,
         isUpdating: false,
         isValidating: false,
       });

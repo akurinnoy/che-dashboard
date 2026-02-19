@@ -49,7 +49,7 @@ describe('Backups selectors', () => {
         backups: {
           ...unloadedState,
           loading: {
-            isLoading: true,
+            loadingCount: 3,
             isUpdating: false,
             isValidating: false,
           },
@@ -58,7 +58,7 @@ describe('Backups selectors', () => {
 
       const result = selectBackupsLoading(mockState);
       expect(result).toEqual({
-        isLoading: true,
+        loadingCount: 3,
         isUpdating: false,
         isValidating: false,
       });
@@ -546,7 +546,7 @@ describe('Backups selectors', () => {
         backups: {
           ...unloadedState,
           loading: {
-            isLoading: true,
+            loadingCount: 2,
             isUpdating: false,
             isValidating: false,
           },
@@ -561,7 +561,7 @@ describe('Backups selectors', () => {
         backups: {
           ...unloadedState,
           loading: {
-            isLoading: false,
+            loadingCount: 0,
             isUpdating: true,
             isValidating: false,
           },
@@ -576,7 +576,7 @@ describe('Backups selectors', () => {
         backups: {
           ...unloadedState,
           loading: {
-            isLoading: false,
+            loadingCount: 0,
             isUpdating: false,
             isValidating: true,
           },

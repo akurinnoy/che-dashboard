@@ -15,7 +15,12 @@
 import { BackupStatus } from '@eclipse-che/common';
 import React from 'react';
 
-import { BackupStatusBadge, BackupStatusBadgeSize, Props } from '@/components/BackupStatusBadge';
+import {
+  BackupStatusBadge,
+  BackupStatusBadgeSize,
+  BackupStatusBadgeVariant,
+  Props,
+} from '@/components/BackupStatusBadge';
 import getComponentRenderer, { screen } from '@/services/__mocks__/getComponentRenderer';
 
 jest.mock('@/services/helpers/dates', () => ({
@@ -221,6 +226,47 @@ describe('BackupStatusBadge', () => {
         size: 'md',
       });
       expect(withDefault.toJSON()).toEqual(withMd.toJSON());
+    });
+  });
+
+  describe('minimal variant', () => {
+    test('should render without Label wrapper', () => {
+      renderComponent({
+        status: BackupStatus.SUCCESS,
+        variant: 'minimal',
+      });
+
+      const badge = screen.getByTestId('backup-status-badge');
+      expect(badge.tagName).toBe('SPAN');
+      expect(badge).toHaveTextContent('Success');
+    });
+
+    test('should display status text with time for minimal variant', () => {
+      renderComponent({
+        status: BackupStatus.SUCCESS,
+        lastBackupTime: '2025-01-15T14:30:00Z',
+        variant: 'minimal',
+      });
+
+      const badge = screen.getByTestId('backup-status-badge');
+      expect(badge).toHaveTextContent('Success 2 hours ago');
+    });
+
+    test('snapshot: minimal success', () => {
+      const snapshot = createSnapshot({
+        status: BackupStatus.SUCCESS,
+        lastBackupTime: '2025-01-15T14:30:00Z',
+        variant: 'minimal',
+      });
+      expect(snapshot.toJSON()).toMatchSnapshot();
+    });
+
+    test('snapshot: minimal never', () => {
+      const snapshot = createSnapshot({
+        status: BackupStatus.NEVER,
+        variant: 'minimal',
+      });
+      expect(snapshot.toJSON()).toMatchSnapshot();
     });
   });
 

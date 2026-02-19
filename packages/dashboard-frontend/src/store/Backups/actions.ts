@@ -22,7 +22,7 @@ import { RootState } from '@/store';
  * Fetches backup status for a specific workspace
  *
  * Updates: state.backups.byWorkspace[workspaceUID]
- * Loading: state.backups.loading.isLoading
+ * Loading: state.backups.loading.loadingCount
  *
  * @param namespace - Kubernetes namespace
  * @param workspaceUID - Unique workspace identifier (used as cache key)

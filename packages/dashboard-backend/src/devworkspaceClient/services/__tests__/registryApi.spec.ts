@@ -28,6 +28,7 @@ const mockAdapter = {
 
 const mockCustomObjectsApi = {
   getNamespacedCustomObject: jest.fn(),
+  listNamespacedCustomObject: jest.fn(),
 };
 
 const mockKubeConfig = {
@@ -45,8 +46,21 @@ describe('RegistryApiService', () => {
   beforeEach(() => {
     service = new RegistryApiService(mockKubeConfig as any, mockAdapter as any);
     jest.clearAllMocks();
-    // Default: workspace exists
-    mockCustomObjectsApi.getNamespacedCustomObject.mockResolvedValue({});
+    // Default: workspace exists (for doesWorkspaceExist checks)
+    // and DWOC config returns a valid registry path (for getBackupRegistryPath)
+    mockCustomObjectsApi.getNamespacedCustomObject.mockResolvedValue({
+      config: {
+        workspace: {
+          backupCronJob: {
+            registry: {
+              path: 'image-registry.openshift-image-registry.svc:5000',
+            },
+          },
+        },
+      },
+    });
+    // Default: no DevWorkspaces with backup annotations
+    mockCustomObjectsApi.listNamespacedCustomObject.mockResolvedValue({ items: [] });
   });
 
   describe('K8s DNS-1123 Validation', () => {
@@ -88,7 +102,7 @@ describe('RegistryApiService', () => {
         labels: {},
       },
       {
-        workspaceName: 'my-workspace',
+        workspaceName: 'my-workspace-2',
         imageUrl: `${imageUrl}-2`,
         timestamp: '2026-02-09T12:00:00.000Z',
         sizeBytes: 2048000,
@@ -123,7 +137,7 @@ describe('RegistryApiService', () => {
 
       const result = await service.listBackupImages(namespace, 'my-workspace');
 
-      expect(result.backups).toHaveLength(2);
+      expect(result.backups).toHaveLength(1);
       expect(result.backups.every(b => b.workspaceName === 'my-workspace')).toBe(true);
     });
 
@@ -140,7 +154,19 @@ describe('RegistryApiService', () => {
       mockAdapter.listBackupImages.mockResolvedValue([mockIBackupImages[0]]);
       const notFoundError: any = new Error('Not found');
       notFoundError.response = { statusCode: 404 };
-      mockCustomObjectsApi.getNamespacedCustomObject.mockRejectedValue(notFoundError);
+      // DWOC config call succeeds, workspace existence call returns 404
+      mockCustomObjectsApi.getNamespacedCustomObject.mockImplementation((params: any) => {
+        if (params.plural === 'devworkspaceoperatorconfigs') {
+          return Promise.resolve({
+            config: {
+              workspace: {
+                backupCronJob: { registry: { path: 'image-registry.openshift-image-registry.svc:5000' } },
+              },
+            },
+          });
+        }
+        return Promise.reject(notFoundError);
+      });
 
       const result = await service.listBackupImages(namespace);
 
@@ -603,10 +629,19 @@ describe('RegistryApiService', () => {
       ];
 
       mockAdapter.listBackupImages.mockResolvedValue(mockImages);
-      // Non-404 error - should fail-safe to true
-      mockCustomObjectsApi.getNamespacedCustomObject.mockRejectedValue(
-        new Error('API server timeout'),
-      );
+      // DWOC config call succeeds, workspace existence call fails with non-404 error
+      mockCustomObjectsApi.getNamespacedCustomObject.mockImplementation((params: any) => {
+        if (params.plural === 'devworkspaceoperatorconfigs') {
+          return Promise.resolve({
+            config: {
+              workspace: {
+                backupCronJob: { registry: { path: 'image-registry.openshift-image-registry.svc:5000' } },
+              },
+            },
+          });
+        }
+        return Promise.reject(new Error('API server timeout'));
+      });
 
       const result = await service.listBackupImages(namespace);
 

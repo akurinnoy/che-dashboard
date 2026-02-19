@@ -42,12 +42,17 @@ export interface BackupsByNamespace {
  * Separated to allow granular UI loading indicators
  */
 export interface LoadingState {
-  /** Loading backup status for a workspace */
-  isLoading: boolean;
+  /** Count of in-flight fetchWorkspaceBackupStatus requests */
+  loadingCount: number;
   /** Updating backup list for a namespace */
   isUpdating: boolean;
   /** Validating a backup image URL */
   isValidating: boolean;
+}
+
+/** Whether any workspace backup status fetch is in-flight */
+export function isLoading(state: LoadingState): boolean {
+  return state.loadingCount > 0;
 }
 
 /**
@@ -71,7 +76,7 @@ export const unloadedState: State = {
   byWorkspace: {},
   byNamespace: {},
   loading: {
-    isLoading: false,
+    loadingCount: 0,
     isUpdating: false,
     isValidating: false,
   },
@@ -90,16 +95,16 @@ export const reducer = createReducer(unloadedState, builder =>
   builder
     // fetchWorkspaceBackupStatus handlers
     .addCase(fetchWorkspaceBackupStatus.pending, state => {
-      state.loading.isLoading = true;
+      state.loading.loadingCount += 1;
       state.error = undefined;
     })
     .addCase(fetchWorkspaceBackupStatus.fulfilled, (state, action) => {
       const { workspaceUID } = action.meta.arg;
       state.byWorkspace[workspaceUID] = action.payload;
-      state.loading.isLoading = false;
+      state.loading.loadingCount = Math.max(0, state.loading.loadingCount - 1);
     })
     .addCase(fetchWorkspaceBackupStatus.rejected, (state, action) => {
-      state.loading.isLoading = false;
+      state.loading.loadingCount = Math.max(0, state.loading.loadingCount - 1);
       state.error = action.payload;
     })
 

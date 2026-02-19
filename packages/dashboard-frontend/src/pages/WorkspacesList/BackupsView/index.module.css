@@ -17,10 +17,6 @@
   min-height: 200px;
 }
 
-.errorMessage {
-  color: var(--pf-v5-global--danger-color--100);
-}
-
 .searchIcon {
   display: flex;
   align-items: center;

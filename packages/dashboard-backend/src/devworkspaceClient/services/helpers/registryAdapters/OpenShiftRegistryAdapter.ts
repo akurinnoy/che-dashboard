@@ -93,6 +93,17 @@ interface ImageStreamTag {
         Labels?: Record<string, string>;
       };
     };
+    dockerImageLayers?: Array<{
+      name: string;
+      size: number;
+      mediaType: string;
+    }>;
+    dockerImageManifests?: Array<{
+      digest: string;
+      manifestSize: number;
+      architecture: string;
+      os: string;
+    }>;
     dockerImageReference: string;
     metadata: {
       name: string;
@@ -304,7 +315,40 @@ export class OpenShiftRegistryAdapter implements IRegistryAdapter {
       const imageStreamTag = response as unknown as ImageStreamTag;
 
       // Extract metadata from ImageStreamTag
-      const sizeBytes = imageStreamTag.image.dockerImageMetadata.Size || 0;
+      // Size calculation priority:
+      // 1. dockerImageLayers (single-arch images) - sum of all layer sizes
+      // 2. dockerImageManifests (manifest lists/multi-arch) - sum of all manifest sizes
+      // 3. dockerImageMetadata.Size (fallback) - often unreliable (just manifest size)
+      const layersSize =
+        imageStreamTag.image.dockerImageLayers?.reduce(
+          (sum, layer) => sum + (layer.size || 0),
+          0,
+        ) || 0;
+
+      const manifestsSize =
+        imageStreamTag.image.dockerImageManifests?.reduce(
+          (sum, manifest) => sum + (manifest.manifestSize || 0),
+          0,
+        ) || 0;
+
+      const metadataSize = imageStreamTag.image.dockerImageMetadata.Size || 0;
+
+      let sizeBytes = 0;
+      if (layersSize > 0) {
+        // Single-architecture image with layers
+        sizeBytes = layersSize;
+        logger.debug(`Image ${name}:${tag} size from layers: ${sizeBytes} bytes`);
+      } else if (manifestsSize > 0) {
+        // Manifest list (multi-architecture image)
+        sizeBytes = manifestsSize;
+        logger.debug(`Image ${name}:${tag} size from manifests: ${sizeBytes} bytes`);
+      } else {
+        // Fallback to metadata size (often unreliable)
+        sizeBytes = metadataSize;
+        logger.warn(
+          `Image ${name}:${tag} has no layer or manifest data, using metadata size: ${sizeBytes} bytes (may be inaccurate)`,
+        );
+      }
       const labels = imageStreamTag.image.dockerImageMetadata.Config?.Labels || {};
 
       // DWO names ImageStreams after workspaces; use the ImageStream name as workspace name

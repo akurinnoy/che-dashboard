@@ -167,7 +167,9 @@ export class RegistryApiService {
       });
       return true;
     } catch (e) {
-      if ((e as any)?.response?.statusCode === 404) {
+      // Handle both old HttpError (response.statusCode) and new ApiException (code) formats
+      const statusCode = (e as any)?.response?.statusCode ?? (e as any)?.code;
+      if (statusCode === 404) {
         return false;
       }
       // On error, assume workspace exists (fail-safe)
@@ -250,13 +252,25 @@ export class RegistryApiService {
     // Construct image URL: registry/namespace/workspace:tag
     const imageUrl = `${registryPath}/${namespace}/${workspaceName}:${BACKUP_IMAGE_DEFAULT_TAG}`;
 
+    // Populate labels with backup-relevant DevWorkspace annotations
+    // so the frontend can derive backup status from them
+    const backupLabels: Record<string, string> = {};
+    if (annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL] !== undefined) {
+      backupLabels[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL] =
+        annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL];
+    }
+    if (annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR] !== undefined) {
+      backupLabels[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR] =
+        annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR];
+    }
+
     return {
       workspaceName,
       imageUrl,
       timestamp: annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_FINISHED_AT],
       sizeBytes: 0, // Unknown for external registry
       workspaceExists: true, // DevWorkspace exists (we're querying it)
-      labels: {},
+      labels: backupLabels,
     };
   }
 
@@ -332,11 +346,26 @@ export class RegistryApiService {
       const backupMap = new Map<string, BackupItem>();
 
       // Add ImageStream results first (these have full data including size)
+      // Merge DevWorkspace backup annotations into labels so frontend can derive status
       for (const image of imageStreamResults) {
         const exists = await this.doesWorkspaceExist(namespace, image.workspaceName);
+        const matchingDW = devworkspacesWithBackups.find(
+          dw => dw.metadata.name === image.workspaceName,
+        );
+        const dwAnnotations = matchingDW?.metadata?.annotations || {};
+        const mergedLabels: Record<string, string> = { ...image.labels };
+        if (dwAnnotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL] !== undefined) {
+          mergedLabels[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL] =
+            dwAnnotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_SUCCESSFUL];
+        }
+        if (dwAnnotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR] !== undefined) {
+          mergedLabels[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR] =
+            dwAnnotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR];
+        }
         backupMap.set(image.workspaceName, {
           ...image,
           workspaceExists: exists,
+          labels: mergedLabels,
         });
       }
 

@@ -75,7 +75,7 @@ describe('OpenShiftRegistryAdapter', () => {
     },
     image: {
       dockerImageMetadata: {
-        Size: 1024000,
+        Size: 177,
         Config: {
           Labels: {
             [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
@@ -83,6 +83,10 @@ describe('OpenShiftRegistryAdapter', () => {
           },
         },
       },
+      dockerImageLayers: [
+        { name: 'sha256:layer1', size: 524288000, mediaType: 'application/vnd.docker.image.rootfs.diff.tar.gzip' },
+        { name: 'sha256:layer2', size: 500000, mediaType: 'application/vnd.docker.image.rootfs.diff.tar.gzip' },
+      ],
       dockerImageReference: `${OPENSHIFT_INTERNAL_REGISTRY_HOSTNAME}:${OPENSHIFT_INTERNAL_REGISTRY_PORT}/${namespace}/${workspaceName}@sha256:abc123`,
       metadata: {
         name: 'sha256:abc123',
@@ -118,7 +122,7 @@ describe('OpenShiftRegistryAdapter', () => {
         workspaceName,
         imageUrl,
         timestamp: '2026-02-10T12:00:00Z',
-        sizeBytes: 1024000,
+        sizeBytes: 524788000,
         labels: {
           [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
           'backup.timestamp': '2026-02-10T12:00:00Z',
@@ -230,8 +234,8 @@ describe('OpenShiftRegistryAdapter', () => {
       expect(backupImages).toHaveLength(0);
     });
 
-    it('should handle ImageStreamTag without size', async () => {
-      const imageStreamTagWithoutSize = {
+    it('should compute size from dockerImageLayers even when dockerImageMetadata.Size is missing', async () => {
+      const imageStreamTagWithoutMetadataSize = {
         ...mockImageStreamTag,
         image: {
           ...mockImageStreamTag.image,
@@ -242,17 +246,117 @@ describe('OpenShiftRegistryAdapter', () => {
               },
             },
           },
+          // dockerImageLayers inherited from mockImageStreamTag via spread
         },
       };
 
       stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
-        imageStreamTagWithoutSize,
+        imageStreamTagWithoutMetadataSize,
+      );
+
+      const backupImages = await registryAdapter.listBackupImages(namespace);
+
+      expect(backupImages).toHaveLength(1);
+      // Should use layer sizes: 524288000 + 500000 = 524788000
+      expect(backupImages[0].sizeBytes).toBe(524788000);
+    });
+
+    it('should fall back to dockerImageMetadata.Size when dockerImageLayers is absent', async () => {
+      const imageStreamTagWithoutLayers = {
+        ...mockImageStreamTag,
+        image: {
+          ...mockImageStreamTag.image,
+          dockerImageMetadata: {
+            Size: 1024000,
+          },
+          dockerImageLayers: undefined,
+        },
+      };
+
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagWithoutLayers,
+      );
+
+      const backupImages = await registryAdapter.listBackupImages(namespace);
+
+      expect(backupImages).toHaveLength(1);
+      expect(backupImages[0].sizeBytes).toBe(1024000);
+    });
+
+    it('should return 0 size when both dockerImageLayers and dockerImageMetadata.Size are absent', async () => {
+      const imageStreamTagNoSize = {
+        ...mockImageStreamTag,
+        image: {
+          ...mockImageStreamTag.image,
+          dockerImageMetadata: {
+            Config: {
+              Labels: {
+                [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
+              },
+            },
+          },
+          dockerImageLayers: undefined,
+        },
+      };
+
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagNoSize,
       );
 
       const backupImages = await registryAdapter.listBackupImages(namespace);
 
       expect(backupImages).toHaveLength(1);
       expect(backupImages[0].sizeBytes).toBe(0);
+    });
+
+    it('should calculate size from dockerImageManifests for manifest lists (multi-arch images)', async () => {
+      const imageStreamTagWithManifests = {
+        ...mockImageStreamTag,
+        image: {
+          ...mockImageStreamTag.image,
+          dockerImageLayers: undefined, // Manifest lists don't have layers
+          dockerImageManifests: [
+            { digest: 'sha256:amd64', manifestSize: 200000000, architecture: 'amd64', os: 'linux' },
+            { digest: 'sha256:arm64', manifestSize: 180000000, architecture: 'arm64', os: 'linux' },
+            { digest: 'sha256:ppc64le', manifestSize: 190000000, architecture: 'ppc64le', os: 'linux' },
+          ],
+        },
+      };
+
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagWithManifests,
+      );
+
+      const backupImages = await registryAdapter.listBackupImages(namespace);
+
+      expect(backupImages).toHaveLength(1);
+      // Should sum all manifest sizes: 200M + 180M + 190M = 570M
+      expect(backupImages[0].sizeBytes).toBe(570000000);
+    });
+
+    it('should prefer dockerImageLayers over dockerImageManifests when both present', async () => {
+      const imageStreamTagWithBoth = {
+        ...mockImageStreamTag,
+        image: {
+          ...mockImageStreamTag.image,
+          dockerImageLayers: [
+            { name: 'sha256:layer1', size: 100000000, mediaType: 'application/vnd.docker.image.rootfs.diff.tar.gzip' },
+          ],
+          dockerImageManifests: [
+            { digest: 'sha256:manifest1', manifestSize: 200000000, architecture: 'amd64', os: 'linux' },
+          ],
+        },
+      };
+
+      stubCustomObjectsApi.getNamespacedCustomObject = jest.fn().mockResolvedValue(
+        imageStreamTagWithBoth,
+      );
+
+      const backupImages = await registryAdapter.listBackupImages(namespace);
+
+      expect(backupImages).toHaveLength(1);
+      // Should use layers (100M) not manifests (200M)
+      expect(backupImages[0].sizeBytes).toBe(100000000);
     });
 
     it('should handle ImageStreamTag without Config.Labels', async () => {
@@ -263,6 +367,7 @@ describe('OpenShiftRegistryAdapter', () => {
           dockerImageMetadata: {
             Size: 1024000,
           },
+          dockerImageLayers: undefined,
         },
       };
 
@@ -301,7 +406,7 @@ describe('OpenShiftRegistryAdapter', () => {
         workspaceName,
         namespace,
         timestamp: expect.any(String),
-        sizeBytes: 1024000,
+        sizeBytes: 524788000,
         labels: {
           [DEVWORKSPACE_BACKUP_LABELS.WORKSPACE_NAME]: workspaceName,
           'backup.timestamp': '2026-02-10T12:00:00Z',

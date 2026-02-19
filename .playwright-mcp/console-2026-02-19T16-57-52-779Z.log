@@ -1,0 +1,16 @@
+[     605ms] Error: Cannot find module './helpers'
+    at webpackMissingModule (webpack-internal:///../common/lib/index.js:44:102)
+    at eval (webpack-internal:///../common/lib/index.js:44:186)
+    at ../common/lib/index.js (http://localhost:8080/dashboard/client.7de6dbf2.js:12727:1)
+    at __webpack_require__ (http://localhost:8080/dashboard/client.7de6dbf2.js:19339:33)
+    at fn (http://localhost:8080/dashboard/client.7de6dbf2.js:19602:21)
+    at eval (webpack-internal:///./src/services/backend-client/websocketClient/messageHandler.ts:5:77)
+    at ./src/services/backend-client/websocketClient/messageHandler.ts (http://localhost:8080/dashboard/client.7de6dbf2.js:15004:1)
+    at __webpack_require__ (http://localhost:8080/dashboard/client.7de6dbf2.js:19339:33)
+    at fn (http://localhost:8080/dashboard/client.7de6dbf2.js:19602:21)
+    at eval (webpack-internal:///./src/services/backend-client/websocketClient/index.ts:9:113)
+[     610ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8080/dashboard/assets/branding/loader.jpg:0
+[     610ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8080/dashboard/assets/branding/loader.jpeg:0
+[     610ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8080/dashboard/assets/branding/loader.png:0
+[     611ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8080/dashboard/assets/branding/loader.gif:0
+[     611ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8080/dashboard/assets/branding/loader.webp:0

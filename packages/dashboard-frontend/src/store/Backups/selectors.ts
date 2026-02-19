@@ -146,7 +146,7 @@ export const selectAllBackupItems = createSelector(selectBackupsState, backups =
  */
 export const selectIsLoadingBackups = createSelector(
   selectBackupsState,
-  state => state.loading.isLoading,
+  state => state.loading.loadingCount > 0,
 );
 
 export const selectIsUpdatingBackups = createSelector(

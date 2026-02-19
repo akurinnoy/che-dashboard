@@ -38,7 +38,29 @@
       "Bash(lsof:*)",
       "Bash(yarn build:dev:*)",
       "Bash(node -e:*)",
-      "Bash(oc auth:*)"
+      "Bash(oc auth:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(else echo \"No knowledge entries found\")",
+      "Bash(fi)",
+      "Bash(~/.claude/knowledge/repos/devworkspace-operator/.km-meta.json:*)",
+      "Bash(kubectl get:*)",
+      "Bash(kubectl logs:*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(kubectl patch:*)",
+      "Bash(python3:*)",
+      "Bash(kubectl auth can-i:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(xargs kubectl delete job -n kubeadmin-che)",
+      "Bash(kubectl delete:*)",
+      "Bash(podman login:*)",
+      "Bash(podman pull:*)",
+      "Bash(podman tag:*)",
+      "Bash(podman push:*)",
+      "WebSearch",
+      "WebFetch(domain:oras.land)",
+      "Bash(podman logout:*)",
+      "Bash(ps:*)"
     ]
   }
 }

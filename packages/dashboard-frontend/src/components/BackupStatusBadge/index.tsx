@@ -27,12 +27,14 @@ import { CheTooltip } from '@/components/CheTooltip';
 import { formatDate, formatRelativeDate } from '@/services/helpers/dates';
 
 export type BackupStatusBadgeSize = 'sm' | 'md' | 'lg';
+export type BackupStatusBadgeVariant = 'default' | 'minimal';
 
 export type Props = {
   status: BackupStatus;
   lastBackupTime?: string;
   backupImageUrl?: string;
   size?: BackupStatusBadgeSize;
+  variant?: BackupStatusBadgeVariant;
 };
 
 const STATUS_COLORS: Record<BackupStatus, LabelProps['color']> = {
@@ -59,7 +61,7 @@ function getStatusIcon(status: BackupStatus): React.ReactElement {
     case BackupStatus.IN_PROGRESS:
       return (
         <Icon status="info" isInline>
-          <InProgressIcon className={styles.rotate} />
+          <InProgressIcon className={styles.rotate} aria-label="Backup in progress" />
         </Icon>
       );
     case BackupStatus.NEVER:
@@ -109,7 +111,7 @@ function getTimeLabel(status: BackupStatus, lastBackupTime?: string): string {
 }
 
 export function BackupStatusBadge(props: Props): React.ReactElement {
-  const { status, lastBackupTime, backupImageUrl, size = 'md' } = props;
+  const { status, lastBackupTime, backupImageUrl, size = 'md', variant = 'default' } = props;
 
   const color = STATUS_COLORS[status];
   const icon = getStatusIcon(status);
@@ -122,9 +124,29 @@ export function BackupStatusBadge(props: Props): React.ReactElement {
   const statusLabel = BACKUP_STATUS_LABELS[status];
   const labelText = timeLabel ? `${statusLabel} ${timeLabel}` : statusLabel;
 
+  if (variant === 'minimal') {
+    return (
+      <CheTooltip content={tooltipContent}>
+        <span
+          className={`${className} ${styles.minimal}`}
+          data-testid="backup-status-badge"
+          aria-label={`Backup status: ${statusLabel}`}
+        >
+          {icon} {labelText}
+        </span>
+      </CheTooltip>
+    );
+  }
+
   return (
     <CheTooltip content={tooltipContent}>
-      <Label className={className} color={color} icon={icon} data-testid="backup-status-badge">
+      <Label
+        className={className}
+        color={color}
+        icon={icon}
+        data-testid="backup-status-badge"
+        aria-label={`Backup status: ${statusLabel}`}
+      >
         {labelText}
       </Label>
     </CheTooltip>
