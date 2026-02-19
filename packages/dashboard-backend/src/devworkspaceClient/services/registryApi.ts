@@ -14,9 +14,11 @@
 
 import {
   BACKUP_ERROR_CODES,
+  BACKUP_IMAGE_DEFAULT_TAG,
   BackupItem,
   BackupListResponse,
   BackupValidationResult,
+  DEVWORKSPACE_BACKUP_ANNOTATIONS,
 } from '@eclipse-che/common';
 import { KubeConfig } from '@kubernetes/client-node';
 import { CustomObjectsApi } from '@kubernetes/client-node';
@@ -24,6 +26,18 @@ import { CustomObjectsApi } from '@kubernetes/client-node';
 import { backupCacheTTL, backupRegistryTimeout } from '@/constants/config';
 import { createError } from '@/devworkspaceClient/services/helpers/createError';
 import { IRegistryAdapter } from '@/devworkspaceClient/services/helpers/registryAdapters';
+
+// DevWorkspaceOperatorConfig constants
+const DWOC_GROUP = 'controller.devfile.io';
+const DWOC_VERSION = 'v1alpha1';
+const DWOC_PLURAL = 'devworkspaceoperatorconfigs';
+const DWOC_NAME = 'devworkspace-operator-config';
+const DWOC_NAMESPACE = 'openshift-operators';
+
+// DevWorkspace constants
+const DEVWORKSPACE_GROUP = 'workspace.devfile.io';
+const DEVWORKSPACE_VERSION = 'v1alpha2';
+const DEVWORKSPACE_PLURAL = 'devworkspaces';
 
 /**
  * Validates Kubernetes DNS-1123 subdomain naming convention
@@ -145,10 +159,10 @@ export class RegistryApiService {
   private async doesWorkspaceExist(namespace: string, workspaceName: string): Promise<boolean> {
     try {
       await this.customObjectsApi.getNamespacedCustomObject({
-        group: 'workspace.devfile.io',
-        version: 'v1alpha2',
+        group: DEVWORKSPACE_GROUP,
+        version: DEVWORKSPACE_VERSION,
         namespace,
-        plural: 'devworkspaces',
+        plural: DEVWORKSPACE_PLURAL,
         name: workspaceName,
       });
       return true;
@@ -159,6 +173,91 @@ export class RegistryApiService {
       // On error, assume workspace exists (fail-safe)
       return true;
     }
+  }
+
+  /**
+   * Get backup registry path from DevWorkspaceOperatorConfig
+   * Returns the configured registry path for backup images
+   */
+  private async getBackupRegistryPath(): Promise<string> {
+    try {
+      const response = await this.customObjectsApi.getNamespacedCustomObject({
+        group: DWOC_GROUP,
+        version: DWOC_VERSION,
+        namespace: DWOC_NAMESPACE,
+        plural: DWOC_PLURAL,
+        name: DWOC_NAME,
+      });
+
+      const operatorConfig = (response as any).body || response;
+      const registryPath = operatorConfig.config?.workspace?.backupCronJob?.registry?.path;
+
+      if (!registryPath) {
+        throw new Error('Backup registry path not configured');
+      }
+
+      return registryPath;
+    } catch (e) {
+      throw createError(
+        e,
+        BACKUP_ERROR_CODES.REGISTRY_API_ERROR,
+        'Unable to get backup registry configuration',
+      );
+    }
+  }
+
+  /**
+   * List DevWorkspaces with backup annotations in the namespace
+   * Returns workspaces that have been backed up at least once
+   */
+  private async listDevWorkspacesWithBackups(namespace: string): Promise<any[]> {
+    try {
+      const response = await this.customObjectsApi.listNamespacedCustomObject({
+        group: DEVWORKSPACE_GROUP,
+        version: DEVWORKSPACE_VERSION,
+        namespace,
+        plural: DEVWORKSPACE_PLURAL,
+      });
+
+      const devworkspaces = (response as unknown as { items: any[] }).items;
+
+      // Filter for workspaces with backup annotations
+      return devworkspaces.filter(dw => {
+        const annotations = dw.metadata?.annotations || {};
+        return annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_FINISHED_AT];
+      });
+    } catch (e) {
+      throw createError(
+        e,
+        BACKUP_ERROR_CODES.REGISTRY_API_ERROR,
+        `Unable to list DevWorkspaces in namespace ${namespace}`,
+      );
+    }
+  }
+
+  /**
+   * Build BackupItem from DevWorkspace annotations
+   * Used for external registry backups where ImageStream is not available
+   */
+  private buildBackupItemFromAnnotations(
+    devworkspace: any,
+    registryPath: string,
+    namespace: string,
+  ): BackupItem {
+    const workspaceName = devworkspace.metadata.name;
+    const annotations = devworkspace.metadata.annotations || {};
+
+    // Construct image URL: registry/namespace/workspace:tag
+    const imageUrl = `${registryPath}/${namespace}/${workspaceName}:${BACKUP_IMAGE_DEFAULT_TAG}`;
+
+    return {
+      workspaceName,
+      imageUrl,
+      timestamp: annotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_FINISHED_AT],
+      sizeBytes: 0, // Unknown for external registry
+      workspaceExists: true, // DevWorkspace exists (we're querying it)
+      labels: {},
+    };
   }
 
   /**
@@ -199,7 +298,7 @@ export class RegistryApiService {
       };
     }
 
-    // Fetch from adapter with timeout protection
+    // HYBRID APPROACH: Query both ImageStreams (internal registry) and DevWorkspace annotations (all registries)
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -207,37 +306,60 @@ export class RegistryApiService {
         }, backupRegistryTimeout * 1000);
       });
 
-      const fetchPromise = this.adapter.listBackupImages(namespace);
+      // Query ImageStreams for internal registry backups (existing logic)
+      const imageStreamPromise = this.adapter.listBackupImages(namespace);
 
-      const allImages = await Promise.race([fetchPromise, timeoutPromise]);
+      // Query DevWorkspaces with backup annotations (handles external registries)
+      const devworkspacesPromise = this.listDevWorkspacesWithBackups(namespace);
+      const registryPathPromise = this.getBackupRegistryPath();
 
-      // SECURITY: Validate data before caching
-      if (!Array.isArray(allImages)) {
+      // Execute all queries in parallel
+      const [imageStreamResults, devworkspacesWithBackups, registryPath] = await Promise.race([
+        Promise.all([imageStreamPromise, devworkspacesPromise, registryPathPromise]),
+        timeoutPromise,
+      ]);
+
+      // SECURITY: Validate ImageStream data before processing
+      if (!Array.isArray(imageStreamResults)) {
         throw createError(
           new Error('Invalid response from registry adapter'),
           BACKUP_ERROR_CODES.REGISTRY_API_ERROR,
-          'Expected array of backup images',
+          'Expected array of backup images from ImageStreams',
         );
       }
 
-      // Check which workspaces exist and enrich with workspaceExists field
-      const enrichedBackups: BackupItem[] = await Promise.all(
-        allImages.map(async image => {
-          const exists = await this.doesWorkspaceExist(namespace, image.workspaceName);
-          return {
-            ...image,
-            workspaceExists: exists,
-          };
-        }),
-      );
+      // Build a map of backups by workspace name (ImageStream data takes precedence)
+      const backupMap = new Map<string, BackupItem>();
+
+      // Add ImageStream results first (these have full data including size)
+      for (const image of imageStreamResults) {
+        const exists = await this.doesWorkspaceExist(namespace, image.workspaceName);
+        backupMap.set(image.workspaceName, {
+          ...image,
+          workspaceExists: exists,
+        });
+      }
+
+      // Add annotation-based results for workspaces NOT in ImageStream results
+      // This handles external registry backups
+      for (const dw of devworkspacesWithBackups) {
+        const wsName = dw.metadata.name;
+        if (!backupMap.has(wsName)) {
+          const backupItem = this.buildBackupItemFromAnnotations(dw, registryPath, namespace);
+          backupMap.set(wsName, backupItem);
+        }
+      }
+
+      // Convert map to array
+      const allBackups = Array.from(backupMap.values());
 
       // Cache the full result set
-      this.setCache(cacheKey, enrichedBackups, backupCacheTTL);
+      this.setCache(cacheKey, allBackups, backupCacheTTL);
 
       // Filter by workspace name if provided
-      let filteredBackups = enrichedBackups;
+      let filteredBackups = allBackups;
       if (workspaceName) {
-        filteredBackups = enrichedBackups.filter(backup => backup.workspaceName === workspaceName);
+        filteredBackups = allBackups.filter(backup => backup.workspaceName === workspaceName);
       }
 
       return {

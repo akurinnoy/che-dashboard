@@ -91,20 +91,45 @@ The adapter is used directly in backup route handlers for listing backups, valid
 
 ---
 
-## Issue: [BACKEND-04] Implement RegistryApiService with Caching
+## Issue: [BACKEND-04] Implement Hybrid Registry Query (Internal + External)
 
 **Team:** Backend
 **Complexity:** Medium
-**Priority:** High (Blocking for backup discovery)
-**Status:** DEFERRED (registry operations handled directly in routes for MVP)
+**Priority:** ⚠️ CRITICAL (BLOCKING MVP - External registry backups not discoverable)
+**Status:** ⚠️ NOT IMPLEMENTED - REQUIRED FOR MVP
 
 **Description:**
-A separate RegistryApiService was not created for MVP. Registry operations are handled directly in the backup route handlers using the OpenShiftRegistryAdapter. A dedicated service with caching may be introduced in Phase 2 for performance optimization.
+Dashboard currently only queries OpenShift ImageStreams for backup discovery. This means backups pushed to external registries (Quay.io, Docker Hub, etc.) are NOT shown in the Backups tab. A hybrid approach is required to support both internal and external registries as per user requirement: "even MVP must support both internal and external registries".
 
-**MVP Approach:**
-- Registry adapter is instantiated directly in route handlers
-- No caching layer yet (adequate for MVP scale)
-- Phase 2 can add caching if performance requires it
+**Root Cause:**
+- Current implementation: Only queries ImageStreams via OpenShiftRegistryAdapter
+- Problem: External registry backups have no ImageStream (images pushed to Quay.io, not internal registry)
+- Result: "No Backups Available" shown even when backups exist in external registry
+
+**Required Implementation:**
+Modify `packages/dashboard-backend/src/devworkspaceClient/services/registryApi.ts` → `listBackupImages()`:
+
+1. **Query ImageStreams** (existing logic - keep as-is):
+   - Provides full metadata (size, tags, etc.)
+   - Works for internal registry backups
+
+2. **Query DevWorkspaces with backup annotations**:
+   - Filter by `controller.devfile.io/last-backup-finished-at` annotation
+   - Extract: workspaceName, timestamp from annotation
+   - Construct imageUrl: `${dwocConfig.workspace.backupCronJob.registry.path}/${namespace}/${workspaceName}:latest`
+
+3. **Merge results**:
+   - Create Map by workspaceName
+   - Add ImageStream results first (full data with size)
+   - Add annotation-based results ONLY for workspaces not in ImageStream map
+   - Return combined list
+
+**Data Contract:**
+- Internal registry backups: Full data (workspaceName, imageUrl, timestamp, sizeBytes, workspaceExists, labels)
+- External registry backups: Minimal data (workspaceName, imageUrl, timestamp, sizeBytes=0, workspaceExists=true, labels={})
+
+**MVP Impact:**
+Without this fix, users cannot see or restore from external registry backups via Dashboard UI.
 
 ---
 
@@ -278,14 +303,15 @@ Performance testing and optimization for backup discovery and status queries wit
 
 ---
 
-## Summary (Updated 2026-02-14)
+## Summary (Updated 2026-02-19)
 
 **Total Issues:** 12
 
 **Status Breakdown:**
 - **COMPLETED:** 6 issues (BACKEND-01, 02, 03, 06, 09, 11)
+- **⚠️ CRITICAL - NOT IMPLEMENTED:** 1 issue (BACKEND-04 - External Registry Support)
 - **PENDING:** 1 issue (BACKEND-07)
-- **DEFERRED:** 3 issues (BACKEND-04, 08, 10)
+- **DEFERRED:** 2 issues (BACKEND-08, 10)
 - **PARTIALLY COMPLETED:** 1 issue (BACKEND-05)
 - **NOT STARTED:** 1 issue (BACKEND-12)
 
@@ -295,7 +321,8 @@ Performance testing and optimization for backup discovery and status queries wit
 3. BACKEND-09 (WebSocket) implemented directly without separate BACKEND-05 service
 4. BACKEND-11 (integration tests) completed
 
-**Remaining for MVP:**
+**⚠️ CRITICAL - Remaining for MVP:**
+- **BACKEND-04: Hybrid Registry Query (Internal + External)** - BLOCKING: External registry backups not discoverable
 - BACKEND-07: Enhance DevWorkspace creation for restore (backend-side validation)
 
 **Phase 2:**

@@ -185,7 +185,7 @@ Redux Toolkit slice at `store/Backups/`:
 1. **Only `:latest` tag supported** - DWO only keeps the most recent backup per workspace. No versioning or history.
 2. **Ephemeral Jobs** - Backup Jobs are cleaned up after 120 seconds. The dashboard must rely on DevWorkspace annotations for historical status.
 3. **Cron-based timing** - Backups are not immediate when a workspace stops. They run on the configured cron schedule (default: every 10 minutes).
-4. **OpenShift-only registry adapter** - MVP only supports OpenShift internal registry via ImageStream API. External registries require Phase 2 work.
+4. **⚠️ CRITICAL: External registry backup discovery NOT IMPLEMENTED** - Dashboard backend only queries OpenShift ImageStreams for backup discovery. Backups pushed to external registries (Quay.io, Docker Hub, etc.) are NOT shown in the Backups tab. A hybrid query approach (ImageStreams + DevWorkspace annotations) is required to support both internal and external registries.
 5. **No selective restore** - Entire PVC is backed up and restored. No file-level granularity.
 
 ---

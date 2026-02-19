@@ -14,8 +14,8 @@
 
 import { BackupInfo, BackupItem, BackupValidationResult } from '@eclipse-che/common';
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
 
+import * as BackupApi from '@/services/backend-client/backupApi';
 import { RootState } from '@/store';
 
 /**
@@ -36,12 +36,9 @@ export const fetchWorkspaceBackupStatus = createAsyncThunk<
   'backups/fetchWorkspaceBackupStatus',
   async ({ namespace, workspaceName }, { rejectWithValue }) => {
     try {
-      const response = await axios.get<BackupInfo>(
-        `/api/namespace/${namespace}/devworkspaces/${workspaceName}/backup-status`,
-      );
-      return response.data;
+      return await BackupApi.getWorkspaceBackupStatus(namespace, workspaceName);
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch backup status');
+      return rejectWithValue(error.message || 'Failed to fetch backup status');
     }
   },
 );
@@ -65,19 +62,10 @@ export const fetchBackupList = createAsyncThunk<
   'backups/fetchBackupList',
   async ({ namespace, workspaceName, page, perPage }, { rejectWithValue }) => {
     try {
-      const response = await axios.get<{ backups: BackupItem[] }>(
-        `/api/namespace/${namespace}/backups`,
-        {
-          params: {
-            workspaceName,
-            page,
-            perPage,
-          },
-        },
-      );
-      return response.data.backups;
+      const response = await BackupApi.listBackups(namespace, workspaceName, page, perPage);
+      return response.backups;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch backup list');
+      return rejectWithValue(error.message || 'Failed to fetch backup list');
     }
   },
 );
@@ -96,12 +84,8 @@ export const validateBackupImage = createAsyncThunk<
   { state: RootState; rejectValue: string }
 >('backups/validateBackupImage', async ({ namespace, imageUrl }, { rejectWithValue }) => {
   try {
-    const response = await axios.post<BackupValidationResult>(
-      `/api/namespace/${namespace}/backups/validate`,
-      { imageUrl },
-    );
-    return response.data;
+    return await BackupApi.validateBackupImage(namespace, imageUrl);
   } catch (error: any) {
-    return rejectWithValue(error.response?.data?.message || 'Failed to validate backup image');
+    return rejectWithValue(error.message || 'Failed to validate backup image');
   }
 });

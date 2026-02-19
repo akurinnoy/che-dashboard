@@ -35,16 +35,19 @@ describe('BackupApiService', () => {
   const expectedImageUrl = `${registry}/${namespace}/${workspaceName}:latest`;
 
   // Operator config returned directly (no .body wrapper, matching k8s client v1.3.0)
+  // Structure matches actual DWO API: enable (not enabled), registry object (not string)
   const mockOperatorConfig = {
     config: {
       workspace: {
         backupCronJob: {
-          enabled: true,
+          enable: true,
           schedule: '0 1 * * *',
-          registry,
-          authSecretName: 'registry-credentials',
+          registry: {
+            path: registry,
+            authSecret: 'registry-credentials',
+          },
           image: 'quay.io/eclipse/che-backup:latest',
-          serviceAccountName: 'che-workspace',
+          serviceAccount: 'che-workspace',
         },
       },
     },
@@ -346,9 +349,11 @@ describe('BackupApiService', () => {
         config: {
           workspace: {
             backupCronJob: {
-              enabled: true,
+              enable: true,
               schedule: '0 1 * * *',
-              registry: '',
+              registry: {
+                path: '',
+              },
             },
           },
         },
@@ -444,9 +449,11 @@ describe('BackupApiService', () => {
         config: {
           workspace: {
             backupCronJob: {
-              enabled: true,
+              enable: true,
               schedule: 'invalid-cron',
-              registry: 'registry.example.com',
+              registry: {
+                path: 'registry.example.com',
+              },
             },
           },
         },
@@ -463,9 +470,11 @@ describe('BackupApiService', () => {
         config: {
           workspace: {
             backupCronJob: {
-              enabled: true,
+              enable: true,
               schedule: '',
-              registry: 'registry.example.com',
+              registry: {
+                path: 'registry.example.com',
+              },
             },
           },
         },

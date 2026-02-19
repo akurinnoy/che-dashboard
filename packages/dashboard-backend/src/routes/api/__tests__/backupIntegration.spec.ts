@@ -96,12 +96,12 @@ jest.mock(
 
 // Helper: Create a standard operator config response (no .body wrapper, matching k8s client v1.3.0)
 function createOperatorConfigResponse(overrides?: {
-  enabled?: boolean;
+  enable?: boolean;
   schedule?: string;
   registry?: string;
-  authSecretName?: string;
+  authSecret?: string;
   image?: string;
-  serviceAccountName?: string;
+  serviceAccount?: string;
 }) {
   return {
     apiVersion: 'controller.devfile.io/v1alpha1',
@@ -110,12 +110,14 @@ function createOperatorConfigResponse(overrides?: {
     config: {
       workspace: {
         backupCronJob: {
-          enabled: overrides?.enabled ?? true,
+          enable: overrides?.enable ?? true,
           schedule: overrides?.schedule ?? '0 1 * * *',
-          registry: overrides?.registry ?? 'image-registry.openshift-image-registry.svc:5000',
-          authSecretName: overrides?.authSecretName,
+          registry: {
+            path: overrides?.registry ?? 'image-registry.openshift-image-registry.svc:5000',
+            authSecret: overrides?.authSecret ?? 'registry-credentials',
+          },
           image: overrides?.image ?? 'quay.io/eclipse/che-backup:latest',
-          serviceAccountName: overrides?.serviceAccountName ?? 'che-workspace',
+          serviceAccount: overrides?.serviceAccount ?? 'che-workspace',
         },
       },
     },

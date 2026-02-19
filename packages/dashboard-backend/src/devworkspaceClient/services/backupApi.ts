@@ -56,6 +56,11 @@ interface DevWorkspaceResponse {
   };
 }
 
+interface RegistryConfig {
+  path?: string;
+  authSecret?: string;
+}
+
 interface DevWorkspaceOperatorConfig {
   apiVersion: string;
   kind: string;
@@ -65,12 +70,12 @@ interface DevWorkspaceOperatorConfig {
   config?: {
     workspace?: {
       backupCronJob?: {
-        enabled?: boolean;
+        enable?: boolean; // Note: lowercase 'enable' per DWO API
         schedule?: string;
-        registry?: string;
-        authSecretName?: string;
+        registry?: RegistryConfig; // Nested object with path and authSecret
         image?: string; // Backup container image
-        serviceAccountName?: string; // Service account for backup jobs
+        serviceAccount?: string; // Service account for backup jobs (no 'Name' suffix)
+        backoffLimit?: number;
       };
     };
   };
@@ -103,10 +108,10 @@ export class BackupApiService {
       const backupConfig = operatorConfig.config?.workspace?.backupCronJob;
 
       return {
-        enabled: backupConfig?.enabled ?? false,
+        enabled: backupConfig?.enable ?? false,
         schedule: backupConfig?.schedule ?? '',
-        registry: (backupConfig?.registry as any)?.path ?? backupConfig?.registry ?? '',
-        authSecretName: backupConfig?.authSecretName,
+        registry: backupConfig?.registry?.path ?? '',
+        authSecretName: backupConfig?.registry?.authSecret,
       };
     } catch (e) {
       throw createError(e, BACKUP_CONFIG_ERROR_LABEL, 'Unable to get cluster backup configuration');

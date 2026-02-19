@@ -1,17 +1,20 @@
 # Backup/Restore Feature - Product Backlog
 
 **Generated:** 2026-02-10
-**Last Updated:** 2026-02-12 (MVP 100% COMPLETE - Task #2 merged, Phase 2 started)
-**Status:** 100% MVP Complete + Phase 2 WebSocket Enhancement Deployed
+**Last Updated:** 2026-02-19 (⚠️ CRITICAL ISSUE IDENTIFIED - External Registry Support Missing)
+**Status:** ⚠️ MVP INCOMPLETE - External registry backup discovery NOT IMPLEMENTED
 **Product Owner:** team-lead
 
 **Current Progress:**
-- ✅ Week 1 (Foundation): 6/6 MVP issues complete (100%) - BACKEND-05 deferred to Phase 2
+- ✅ Week 1 (Foundation): 5/6 MVP issues complete (83%) - **BACKEND-04 NOT IMPLEMENTED**, BACKEND-05 deferred to Phase 2
 - ✅ Week 2 (API & State): 8/8 issues complete (100%) - ALL COMPLETE!
 - ✅ Week 3 (UI Components): 5/5 issues complete (100%) - ALL COMPLETE!
 - ✅ Week 4 (Integration & Testing): 5/5 issues complete (100%) - BACKEND-11 COMPLETE!
-- ✅ **Overall: 24/24 MVP issues complete (100%)** 🎉
+- ⚠️ **Overall: 23/24 MVP issues complete (96%)** - **BACKEND-04 CRITICAL BLOCKER**
 - ✅ **Phase 2 Started:** BACKEND-09 (WebSocket) deployed
+
+**⚠️ CRITICAL MVP BLOCKER:**
+- **BACKEND-04: External Registry Support** - Dashboard only shows backups from internal registry, external registry backups (Quay.io, etc.) NOT discoverable
 
 ---
 
@@ -93,10 +96,11 @@ PHASE 2 (Post-MVP)
 
 ### Critical Path (Blocking Issues)
 1. **COMMON-01** → Blocks all backend and frontend work
-2. **BACKEND-02, BACKEND-03, BACKEND-04** → Block BACKEND-06 (API routes)
-3. **BACKEND-06** → Blocks all frontend component integration
-4. **FRONTEND-01, FRONTEND-02, FRONTEND-03** → Block all frontend components
-5. **FRONTEND-06 through FRONTEND-10** → Block page integration
+2. **BACKEND-02, BACKEND-03** → Block BACKEND-06 (API routes)
+3. **⚠️ BACKEND-04** → **CRITICAL MVP BLOCKER** - External registry backups not discoverable
+4. **BACKEND-06** → Blocks all frontend component integration
+5. **FRONTEND-01, FRONTEND-02, FRONTEND-03** → Block all frontend components
+6. **FRONTEND-06 through FRONTEND-10** → Block page integration
 
 ---
 
@@ -192,29 +196,34 @@ PHASE 2 (Post-MVP)
 
 ---
 
-### [P0] BACKEND-04: Implement RegistryApiService with Caching
+### [P0] ⚠️ BACKEND-04: Implement Hybrid Registry Query (Internal + External Registries)
 **Team:** Backend
 **Complexity:** Medium
-**Blocking:** BACKEND-06
+**Blocking:** MVP Release - External registry backups not discoverable
+**Status:** ⚠️ CRITICAL - NOT IMPLEMENTED
 
-**Description:** Implement RegistryApiService with in-memory caching for backup image discovery and validation.
+**Description:**
+Dashboard currently only queries OpenShift ImageStreams, which means backups pushed to external registries (Quay.io, Docker Hub, etc.) are NOT shown in the Backups tab. Implement hybrid approach to query BOTH ImageStreams (internal registry) AND DevWorkspace annotations (all registries).
+
+**User Requirement:** "even MVP must support both internal and external registries"
 
 **Acceptance Criteria:**
-- [ ] Create RegistryApiService using adapter pattern
-- [ ] Implement `listBackupImages()` with pagination
-- [ ] Implement `validateBackupImage()` for accessibility checks
-- [ ] Implement `getImageMetadata()` to retrieve labels
-- [ ] Add in-memory cache with 5-minute TTL
-- [ ] Implement 10-second timeout for registry queries
-- [ ] Return cached results with warning on timeout
-- [ ] Unit tests achieve >90% coverage
+- [ ] Modify `packages/dashboard-backend/src/devworkspaceClient/services/registryApi.ts` → `listBackupImages()`
+- [ ] Query ImageStreams (existing logic - keep as-is for internal registry backups)
+- [ ] Query DevWorkspaces with `controller.devfile.io/last-backup-finished-at` annotation
+- [ ] Construct imageUrl from DWOC config: `${registry.path}/${namespace}/${workspaceName}:latest`
+- [ ] Merge results: ImageStream data first, then annotation-based data for missing workspaces
+- [ ] Return combined list with all backups (internal + external)
+- [ ] Unit tests for hybrid query logic
+- [ ] Integration tests with both internal and external backups
 
-**Dependencies:** COMMON-01, BACKEND-03
+**Dependencies:** BACKEND-02 (BackupApiService), BACKEND-03 (Registry Adapters)
 
 **Technical Notes:**
-- Cache key format: `namespace:{namespace}`
-- Environment variable: `BACKUP_CACHE_TTL_SECONDS` (default: 300)
-- Environment variable: `REGISTRY_QUERY_TIMEOUT_SECONDS` (default: 10)
+- ImageStream results: Full metadata (size, tags, labels)
+- Annotation-based results: Minimal metadata (workspaceName, imageUrl, timestamp, sizeBytes=0)
+- Merge by workspaceName to avoid duplicates
+- Get DWOC config for registry.path to construct imageUrl
 
 ---
 
@@ -763,12 +772,12 @@ PHASE 2 (Post-MVP)
 
 ## Implementation Checklist
 
-### Week 1 - Foundation ✅ COMPLETE
+### Week 1 - Foundation ⚠️ INCOMPLETE - BACKEND-04 NOT IMPLEMENTED
 - [x] COMMON-01: Shared Types (P0) - Task #1
 - [x] COMMON-02: Shared Constants (P0) - Task #2
 - [x] BACKEND-02: BackupApiService (P0) - Tasks #5, #16
 - [x] BACKEND-03: Registry Adapters (P0) - Tasks #3, #4
-- [x] BACKEND-04: RegistryApiService (P0) - Task #5
+- [ ] ⚠️ **BACKEND-04: Hybrid Registry Query (P0)** - **CRITICAL MVP BLOCKER - NOT IMPLEMENTED**
 - [x] BACKEND-10: Environment Variables (P2) - Task #6
 - [ ] BACKEND-05: JobApiService (P3 - Phase 2) - Deferred to Phase 2
 
