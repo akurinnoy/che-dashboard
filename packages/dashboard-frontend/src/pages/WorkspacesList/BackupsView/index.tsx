@@ -233,7 +233,11 @@ export class BackupsView extends React.PureComponent<Props, State> {
           key: 'backup-time',
         },
         {
-          title: <span data-testid="backup-size">{formatBytes(backup.sizeBytes)}</span>,
+          title: (
+            <span data-testid="backup-size">
+              {backup.sizeBytes === 0 ? '-' : formatBytes(backup.sizeBytes)}
+            </span>
+          ),
           key: 'size',
         },
         {

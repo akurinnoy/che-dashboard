@@ -1,9 +1,9 @@
 # Frontend Implementation Issues: Backup/Restore Features
 
 **Generated:** 2026-02-10
-**Updated:** 2026-02-19 (FRONTEND-20, 21 added; FRONTEND-15, 18, 19 fixed)
+**Updated:** 2026-02-19 (FRONTEND-22, 23 added; FRONTEND-15, 18, 19, 20, 21 fixed)
 **Team:** Frontend
-**Total Issues:** 21 (14 implementation + 7 bugs/improvements, 1 obsolete)
+**Total Issues:** 23 (14 implementation + 9 bugs/improvements, 1 obsolete)
 
 > **Architecture Note:** The dashboard reads backup status from DevWorkspace annotations
 > set by DWO's internal backup controller. There are no Kubernetes CronJob resources.
@@ -690,6 +690,251 @@ The fix is **correct and working**. The small sizes in the current cluster are r
 - FRONTEND-15 (Active/Deleted label issue) - FIXED
 - FRONTEND-18 (Status shows "Never" despite backup time) - FIXED
 - May be related to BACKEND-04 if external registry support is incomplete
+
+---
+
+### Issue: [FRONTEND-20] External Registry Backups Show "0 B" Instead of Placeholder
+
+**Team:** Frontend
+**Complexity:** Small
+**Status:** FIXED ✅
+**Severity:** Low (UX/Polish)
+**Reported:** 2026-02-19 19:36
+**Fixed:** 2026-02-19 19:42
+**Description:** Backup sizes for external registry backups (e.g., quay.io) show "0 B" which is misleading - it looks like the backup is empty or broken. Size data is unavailable for external registries, so a placeholder should be shown instead.
+
+**Current Behavior:**
+- External registry backups display "0 B" in the Size column
+- This is technically correct (sizeBytes === 0) but misleading to users
+
+**Expected Behavior:**
+- External registry backups should show `-` (single hyphen) in the Size column
+- Consistent with how the Project(s) column displays unavailable data in Active Workspaces view
+- Optional: Tooltip explaining "Size unavailable for external registry backups"
+
+**Acceptance Criteria:**
+- [x] BackupsView shows `-` instead of "0 B" when `sizeBytes === 0`
+- [x] Consistent with Project(s) column style (single hyphen)
+
+**Fix Implemented:**
+- `packages/dashboard-frontend/src/pages/WorkspacesList/BackupsView/index.tsx:238` - Changed from `formatBytes(backup.sizeBytes)` to `backup.sizeBytes === 0 ? '-' : formatBytes(backup.sizeBytes)`
+- `packages/dashboard-frontend/src/pages/WorkspacesList/BackupsView/__tests__/index.spec.tsx` - Updated test to expect `-` instead of "0 B"
+- All 58 BackupsView tests passing ✅
+
+**Technical Notes:**
+- External registry backups have `sizeBytes: 0` because ImageStream API doesn't provide size for external images
+- This is expected behavior, just needs better UX
+
+---
+
+### Issue: [FRONTEND-21] Restore from Backup Fails with "Repository/Devfile URL is missing" Error
+
+**Team:** Frontend
+**Complexity:** Medium
+**Status:** FIXED ✅
+**Severity:** **High** (Critical user-facing bug - restore doesn't work)
+**Reported:** 2026-02-19 19:36
+**Fixed:** 2026-02-19 19:46
+**Description:** When attempting to restore a workspace from backup, the confirmation succeeds but then fails with error: "Repository/Devfile URL is missing. Please specify it via url query param: http://localhost:8080/dashboard/#/load-factory?url=url"
+
+**Screenshot Evidence:**
+Error modal shows after restore confirmation. The error suggests the app is redirecting to the factory loader instead of creating a DevWorkspace with restore attributes.
+
+**Current Behavior:**
+1. User navigates to Restore from Backup page
+2. User fills in workspace name and selects backup source
+3. User clicks Restore and confirms
+4. Error appears: "Repository/Devfile URL is missing"
+5. No workspace is created
+
+**Expected Behavior:**
+1. User navigates to Restore from Backup page
+2. User fills in workspace name and selects backup source
+3. User clicks Restore and confirms
+4. Workspace is created with restore attributes:
+   - `controller.devfile.io/restore-workspace: "true"`
+   - `controller.devfile.io/restore-source-image: <backup-image-url>`
+5. User is redirected to workspace startup page
+6. DWO restores the workspace from backup
+
+**Root Cause Investigation Needed:**
+The error message points to the factory loader (`/load-factory`), which suggests:
+- The restore flow is incorrectly using the factory/devfile creation path
+- It's missing the logic to create a DevWorkspace with restore attributes
+- The redirect URL might be wrong (should go to workspace startup, not factory loader)
+
+**Possible Issues:**
+1. **RestoreFromBackup component**: Not calling the correct API to create a workspace with restore attributes
+2. **Workspace creation logic**: Restore might be triggering the factory flow instead of direct DevWorkspace creation
+3. **Navigation**: After confirmation, redirecting to wrong page (`/load-factory` instead of workspace startup)
+
+**Root Cause Found:**
+- `handleConfirmRestore()` in `packages/dashboard-frontend/src/pages/RestoreFromBackup/index.tsx:325-337` was navigating to `/load-factory` with restore params
+- Factory loader requires a `url` parameter (git/devfile URL) and doesn't understand `restoreFromBackup` or `backupImageUrl` params
+- Backend already supported restore via `POST /api/namespace/:namespace/devworkspaces` with `restoreFromBackup` and `backupImageUrl` in request body
+- Frontend was missing: API client method, Redux action, and component integration
+
+**Fix Implemented:**
+1. **Added API client method** (`packages/dashboard-frontend/src/services/backend-client/devWorkspaceApi.ts:144-173`):
+   - `restoreWorkspace(namespace, workspaceName, backupImageUrl, devworkspace?)`
+   - POSTs to `/api/namespace/${namespace}/devworkspaces` with `{ devworkspace, restoreFromBackup: true, backupImageUrl }`
+   - Creates minimal DevWorkspace object if none provided
+
+2. **Added Redux action** (`packages/dashboard-frontend/src/store/Workspaces/actions.ts:119-128`):
+   - `restoreFromBackup(namespace, workspaceName, backupImageUrl)` async thunk
+   - Calls API client and refreshes workspace list
+
+3. **Fixed component** (`packages/dashboard-frontend/src/pages/RestoreFromBackup/index.tsx:326-343`):
+   - Replaced `/load-factory` navigation with dispatch of `restoreFromBackup` action
+   - Navigates to workspaces list on success
+   - Shows error in existing UI alert on failure
+
+4. **Updated tests** (`packages/dashboard-frontend/src/pages/RestoreFromBackup/__tests__/index.spec.tsx`):
+   - Added `mockRestoreFromBackup` mock
+   - Updated confirmation test to verify API call instead of navigation
+
+**Test Results:**
+- All 28 RestoreFromBackup tests passing ✅
+- All 58 BackupsView tests passing ✅
+- Total: 86 tests passing
+
+**Acceptance Criteria:**
+- [x] Restore creates a DevWorkspace with restore attributes (not a factory/devfile import)
+- [x] No "Repository/Devfile URL is missing" error
+- [x] After confirmation, user is redirected to workspaces list
+- [x] All tests passing
+
+**Technical Notes:**
+- DWO uses DevWorkspace attributes for restore: `controller.devfile.io/restore-workspace: "true"` and `controller.devfile.io/restore-source-image`
+- See `BACKUP_ARCHITECTURE.md` for restore flow details
+- The restore should NOT use the factory/devfile import flow at all - it's a direct DevWorkspace creation
+
+**Related Issues:**
+- FRONTEND-17 (Dedicated restore page) - The page exists but restore functionality is broken
+
+---
+
+### Issue: [FRONTEND-22] Backup Status Shows "Never" Despite Backup Time (Regression)
+
+**Team:** Frontend/Backend
+**Complexity:** Medium
+**Status:** PENDING
+**Severity:** Medium (Data inconsistency)
+**Reported:** 2026-02-19 21:33
+**Description:** After restoring a backup, the Backups view shows contradictory information: "Backup Time: 1 day ago" but "Status: Never". If there's a backup time, the status should be "Success" or "Failed", not "Never".
+
+**Screenshot Evidence:**
+Backup for `empty-rpzm-t9xv` shows:
+- Backup Time: "1 day ago" ✓
+- Status: "Never" ✗ (should be "Success")
+
+**This May Be a Regression:**
+This is similar to FRONTEND-18 which was supposedly fixed on 2026-02-19. The fix added logic to populate backup labels from DevWorkspace annotations in the backend (`registryApi.ts`). However, the issue still appears, suggesting:
+1. The backend fix wasn't applied/rebuilt
+2. Or the fix doesn't work for all cases (e.g., ImageStream-only backups without active DevWorkspace)
+3. Or the ImageStream doesn't have backup annotations in its Docker image labels
+
+**Root Cause Investigation Needed:**
+1. Check if the backend fix from FRONTEND-18 is actually running in the current build
+2. Check the ImageStream YAML for `empty-rpzm-t9xv`:
+   ```bash
+   kubectl get imagestream empty-rpzm-t9xv -n <namespace> -o yaml
+   ```
+   - Look for `image.dockerImageMetadata.Config.Labels`
+   - Check if `controller.devfile.io/last-backup-successful` label exists
+3. Check the backend API response:
+   ```bash
+   curl http://localhost:8080/api/namespace/<namespace>/backup/list
+   ```
+   - Verify `labels` field is populated with backup status annotations
+4. Check if `deriveBackupStatus()` in `BackupsView/index.tsx` is receiving the labels correctly
+
+**Possible Causes:**
+- Backend fix from FRONTEND-18 not applied/rebuilt
+- ImageStream doesn't have backup annotations (DWO didn't set them during backup)
+- Backend only populates labels when DevWorkspace exists, but after restore the old workspace is gone
+- The fix works for workspaces with active DevWorkspace but not for "orphaned" ImageStreams
+
+**Acceptance Criteria:**
+- [ ] Backup status shows "Success" when backup time exists and backup was successful
+- [ ] Backup status shows "Failed" when backup annotation indicates failure
+- [ ] Backup status only shows "Never" when NO backup time exists
+- [ ] Status is consistent with backup time for all backups (active workspace, deleted workspace, restored workspace)
+
+**Files to Investigate:**
+- `packages/dashboard-backend/src/devworkspaceClient/services/registryApi.ts` - Check if FRONTEND-18 fix is present
+- `packages/dashboard-backend/src/devworkspaceClient/services/helpers/registryAdapters/OpenShiftRegistryAdapter.ts` - Image metadata retrieval
+- `packages/dashboard-frontend/src/pages/WorkspacesList/BackupsView/index.tsx` - `deriveBackupStatus()` function
+- ImageStream YAML for the affected backup
+
+**Related Issues:**
+- FRONTEND-18 (Status shows "Never" despite backup time) - Supposedly fixed but may be a regression
+
+---
+
+### Issue: [FRONTEND-23] ImageStreams Without :latest Tag Don't Appear in Backups View
+
+**Team:** Frontend/Backend
+**Complexity:** Small
+**Status:** PENDING
+**Severity:** Low (UX/Completeness)
+**Reported:** 2026-02-19 21:30
+**Description:** ImageStreams that have no `:latest` tag are filtered out and don't appear in the Backups view, even though the ImageStream resource still exists.
+
+**Steps to Reproduce:**
+1. Create a workspace and back it up (ImageStream created with `:latest` tag)
+2. Delete the workspace using force-delete that bypasses cleanup (e.g., removing finalizers manually)
+3. The ImageStream `:latest` tag may be removed or become empty
+4. The ImageStream shell remains but has no tags
+5. Backups view doesn't show this backup
+
+**Example:**
+```bash
+kubectl get imagestream -n kubeadmin-che
+NAME              TAGS     UPDATED
+empty-rpzm-t9xv   latest   34 hours ago
+go-wmtn                    <--- No tags, not shown in Backups view
+nodejs-0lcq
+```
+
+**Current Behavior:**
+- Backend (`OpenShiftRegistryAdapter.ts`) filters out ImageStreams without a `:latest` tag:
+  ```typescript
+  if (!latestTag || !latestTag.items || latestTag.items.length === 0) {
+    logger.warn(`ImageStream ${imageStream.metadata.name} has no :latest tag, skipping`);
+    continue;
+  }
+  ```
+- Backups view doesn't show these ImageStreams at all
+- Users don't know the ImageStream exists or that it needs cleanup
+
+**Expected Behavior:**
+Option A: Show ImageStreams without tags with a special status (e.g., "Invalid" or "No Data")
+Option B: Don't show them but provide a way to discover and clean up orphaned ImageStreams
+Option C: Keep current behavior (filter them out) but document it
+
+**Acceptance Criteria:**
+- [ ] Decide on expected behavior (A, B, or C)
+- [ ] If Option A: Update backend to include ImageStreams without `:latest` tag with a special status
+- [ ] If Option B: Provide admin tool or documentation for finding/cleaning orphaned ImageStreams
+- [ ] If Option C: Document the filtering behavior in user docs
+
+**Recommended Approach:**
+Option B seems best - ImageStreams without tags have no usable backup data, so showing them in the Backups view adds no value. Instead:
+1. Document the behavior
+2. Provide a cleanup command in docs:
+   ```bash
+   kubectl get imagestream -n <namespace> -o json | \
+     jq -r '.items[] | select(.status.tags == null or .status.tags == []) | .metadata.name' | \
+     xargs -I{} kubectl delete imagestream {} -n <namespace>
+   ```
+
+**Files to Modify:**
+- Documentation (if Option B or C)
+- `packages/dashboard-backend/src/devworkspaceClient/services/helpers/registryAdapters/OpenShiftRegistryAdapter.ts` (if Option A)
+
+**Related Issues:**
+- This was discovered while investigating the `go-wmtn` stuck DevWorkspace deletion issue
 
 ---
 

@@ -60,7 +60,8 @@
       "WebSearch",
       "WebFetch(domain:oras.land)",
       "Bash(podman logout:*)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

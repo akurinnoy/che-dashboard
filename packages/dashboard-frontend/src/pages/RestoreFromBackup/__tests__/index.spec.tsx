@@ -26,6 +26,7 @@ import { RestoreFromBackupPage } from '..';
 const mockNavigate = jest.fn();
 const mockValidateBackupImage = jest.fn();
 const mockFetchBackupList = jest.fn();
+const mockRestoreFromBackup = jest.fn();
 
 const defaultNamespace: che.KubernetesNamespace = {
   name: 'user-namespace',
@@ -311,7 +312,8 @@ describe('RestoreFromBackupPage', () => {
       expect(screen.queryByTestId('restore-confirmation-modal')).not.toBeInTheDocument();
     });
 
-    test('should navigate to factory loader on confirm', async () => {
+    test('should call restoreFromBackup and navigate to workspaces on confirm', async () => {
+      mockRestoreFromBackup.mockResolvedValue(undefined);
       renderComponent();
 
       const input = screen.getByLabelText('Workspace name');
@@ -324,9 +326,17 @@ describe('RestoreFromBackupPage', () => {
       const confirmButton = screen.getByTestId('restore-confirm-button');
       await userEvent.click(confirmButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith(
-        expect.stringContaining('/load-factory?restoreFromBackup=true'),
-      );
+      await waitFor(() => {
+        expect(mockRestoreFromBackup).toHaveBeenCalledWith(
+          'user-namespace',
+          'my-workspace',
+          'image-registry.openshift-image-registry.svc:5000/user-namespace/my-workspace:latest',
+        );
+      });
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalled();
+      });
     });
   });
 
@@ -377,6 +387,7 @@ function getComponent(
         backups={options.backups || []}
         validateBackupImage={mockValidateBackupImage}
         fetchBackupList={mockFetchBackupList}
+        restoreFromBackup={mockRestoreFromBackup}
         navigate={mockNavigate}
         initialBackupImageUrl={options.initialBackupImageUrl}
       />

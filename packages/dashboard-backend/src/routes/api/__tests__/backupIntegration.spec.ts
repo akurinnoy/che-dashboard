@@ -469,9 +469,11 @@ describe('Backup API Integration Tests', () => {
       ];
 
       mockAdapterListBackupImages.mockResolvedValue(allBackups);
+      mockCustomObjectAPI.listNamespacedCustomObject.mockResolvedValue({ items: [] });
 
-      // First workspace exists, second returns 404
+      // Mock chain: 1) operator config, 2) existing-ws exists, 3) deleted-ws returns 404
       mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce(createOperatorConfigResponse()) // operator config
         .mockResolvedValueOnce({}) // existing-ws exists
         .mockRejectedValueOnce(
           Object.assign(new Error('Not found'), { response: { statusCode: 404 } }),
@@ -513,7 +515,10 @@ describe('Backup API Integration Tests', () => {
       ];
 
       mockAdapterListBackupImages.mockResolvedValue(allBackups);
-      mockCustomObjectAPI.getNamespacedCustomObject.mockResolvedValue({});
+      mockCustomObjectAPI.listNamespacedCustomObject.mockResolvedValue({ items: [] });
+      mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce(createOperatorConfigResponse()) // operator config
+        .mockResolvedValue({}); // all workspace existence checks
 
       const res = await app
         .inject()
@@ -530,6 +535,10 @@ describe('Backup API Integration Tests', () => {
 
     it('should return empty list when adapter returns no images', async () => {
       mockAdapterListBackupImages.mockResolvedValue([]);
+      mockCustomObjectAPI.listNamespacedCustomObject.mockResolvedValue({ items: [] });
+      mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce(createOperatorConfigResponse()) // operator config
+        .mockResolvedValue({}); // any workspace existence checks
 
       const res = await app.inject().get(`${baseApiPath}/namespace/${namespace}/backups`);
 
@@ -593,6 +602,10 @@ describe('Backup API Integration Tests', () => {
 
     it('should accept valid namespace with hyphens', async () => {
       mockAdapterListBackupImages.mockResolvedValue([]);
+      mockCustomObjectAPI.listNamespacedCustomObject.mockResolvedValue({ items: [] });
+      mockCustomObjectAPI.getNamespacedCustomObject
+        .mockResolvedValueOnce(createOperatorConfigResponse()) // operator config
+        .mockResolvedValue({}); // any workspace existence checks
 
       const res = await app.inject().get(`${baseApiPath}/namespace/user-che-namespace/backups`);
 

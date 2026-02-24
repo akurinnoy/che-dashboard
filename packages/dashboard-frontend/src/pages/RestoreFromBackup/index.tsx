@@ -47,6 +47,7 @@ import { AppDispatch, RootState } from '@/store';
 import { fetchBackupList, validateBackupImage } from '@/store/Backups/actions';
 import { selectNamespaceBackups } from '@/store/Backups/selectors';
 import { selectDefaultNamespace } from '@/store/InfrastructureNamespaces/selectors';
+import { workspacesActionCreators } from '@/store/Workspaces';
 
 export type RestoreMode = 'same-cluster' | 'cross-cluster';
 
@@ -326,15 +327,15 @@ export class RestoreFromBackupPage extends React.PureComponent<Props, State> {
     this.setState({ isConfirmModalOpen: false, isSubmitting: true, submitError: '' });
 
     try {
-      // Navigate to factory loader with restore attributes
       const imageUrl = this.getResolvedImageUrl();
       const workspaceName = this.getResolvedWorkspaceName();
-      const factoryUrl = `/load-factory?restoreFromBackup=true&backupImageUrl=${encodeURIComponent(imageUrl)}`;
-      if (workspaceName) {
-        this.props.navigate(`${factoryUrl}&name=${encodeURIComponent(workspaceName)}`);
-      } else {
-        this.props.navigate(factoryUrl);
-      }
+      const { defaultNamespace } = this.props;
+      const namespace = defaultNamespace.name;
+
+      await this.props.restoreFromBackup(namespace, workspaceName, imageUrl);
+
+      const location = buildWorkspacesLocation();
+      this.props.navigate(location);
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'Failed to initiate restore.';
       this.setState({ isSubmitting: false, submitError: errorMessage });
@@ -595,6 +596,8 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
   validateBackupImage: (params: { namespace: string; imageUrl: string }) =>
     dispatch(validateBackupImage(params)),
   fetchBackupList: (params: { namespace: string }) => dispatch(fetchBackupList(params)),
+  restoreFromBackup: (namespace: string, workspaceName: string, backupImageUrl: string) =>
+    dispatch(workspacesActionCreators.restoreFromBackup(namespace, workspaceName, backupImageUrl)),
 });
 
 const connector = connect(mapStateToProps, mapDispatchToProps);

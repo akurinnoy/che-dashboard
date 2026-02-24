@@ -424,7 +424,7 @@ describe('BackupsView', () => {
   });
 
   describe('formatBytes', () => {
-    test('should display 0 B for zero bytes', () => {
+    test('should display hyphen for zero bytes', () => {
       const zeroBackup: BackupItem[] = [
         {
           workspaceName: 'zero-workspace',
@@ -438,7 +438,7 @@ describe('BackupsView', () => {
       renderComponent({ backups: zeroBackup });
 
       const size = screen.getByTestId('backup-size');
-      expect(size).toHaveTextContent('0 B');
+      expect(size).toHaveTextContent('-');
     });
 
     test('should display KB for kilobyte sizes', () => {

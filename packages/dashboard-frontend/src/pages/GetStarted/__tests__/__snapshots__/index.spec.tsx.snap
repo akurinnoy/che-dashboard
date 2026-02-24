@@ -62,6 +62,165 @@ exports[`GetStarted snapshot 1`] = `
       />
       Samples List
     </div>
+    <div
+      className="spacer"
+      data-testid="spacer"
+    />
+    <div
+      className="pf-c-panel"
+    >
+      <div
+        className="pf-c-panel__header"
+      >
+        <h3
+          className="pf-c-title pf-m-lg"
+          data-ouia-component-id="OUIA-Generated-Title-2"
+          data-ouia-component-type="PF4/Title"
+          data-ouia-safe={true}
+        >
+          Restore from Backup
+        </h3>
+      </div>
+      <div
+        className="pf-c-panel__main"
+        style={
+          {
+            "--pf-c-panel__main--MaxHeight": undefined,
+          }
+        }
+      >
+        <div
+          className="pf-c-panel__main-body"
+        >
+          <div
+            className="radioGroup"
+          >
+            <div
+              className="radioItem"
+            >
+              <div
+                className="pf-c-radio"
+              >
+                <input
+                  aria-invalid={false}
+                  checked={true}
+                  className="pf-c-radio__input"
+                  data-ouia-component-id="OUIA-Generated-Radio-1"
+                  data-ouia-component-type="PF4/Radio"
+                  data-ouia-safe={true}
+                  disabled={false}
+                  id="restore-mode-same-cluster"
+                  name="restore-mode"
+                  onChange={[Function]}
+                  type="radio"
+                />
+                <label
+                  className="pf-c-radio__label"
+                  htmlFor="restore-mode-same-cluster"
+                >
+                  Same cluster
+                </label>
+                <span
+                  className="pf-c-radio__description"
+                >
+                  Restore a workspace from a backup on this cluster.
+                </span>
+              </div>
+            </div>
+            <div
+              className="radioItem"
+            >
+              <div
+                className="pf-c-radio"
+              >
+                <input
+                  aria-invalid={false}
+                  checked={false}
+                  className="pf-c-radio__input"
+                  data-ouia-component-id="OUIA-Generated-Radio-2"
+                  data-ouia-component-type="PF4/Radio"
+                  data-ouia-safe={true}
+                  disabled={false}
+                  id="restore-mode-cross-cluster"
+                  name="restore-mode"
+                  onChange={[Function]}
+                  type="radio"
+                />
+                <label
+                  className="pf-c-radio__label"
+                  htmlFor="restore-mode-cross-cluster"
+                >
+                  Cross cluster
+                </label>
+                <span
+                  className="pf-c-radio__description"
+                >
+                  Restore from a backup image on a different cluster or registry.
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
+            className="formFields"
+          >
+            <div
+              className="pf-c-form__group"
+            >
+              <div
+                className="pf-c-form__group-label"
+              >
+                <label
+                  className="pf-c-form__label"
+                  htmlFor="restore-workspace-name"
+                >
+                  <span
+                    className="pf-c-form__label-text"
+                  >
+                    Workspace name
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="pf-c-form__label-required"
+                  >
+                     
+                    *
+                  </span>
+                </label>
+                 
+              </div>
+              <div
+                className="pf-c-form__group-control"
+              >
+                <input
+                  aria-invalid={false}
+                  aria-label="Workspace name"
+                  className="pf-c-form-control"
+                  data-ouia-component-id="OUIA-Generated-TextInputBase-1"
+                  data-ouia-component-type="PF4/TextInput"
+                  data-ouia-safe={true}
+                  disabled={false}
+                  id="restore-workspace-name"
+                  onBlur={[Function]}
+                  onChange={[Function]}
+                  onFocus={[Function]}
+                  placeholder="my-workspace"
+                  required={false}
+                  type="text"
+                  value=""
+                />
+                <div
+                  aria-live="polite"
+                  className="pf-c-form__helper-text"
+                  id="restore-workspace-name-helper"
+                >
+                  Enter the name of the workspace to restore.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>,
 ]
 `;

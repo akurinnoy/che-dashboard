@@ -342,7 +342,7 @@ export class RegistryApiService {
         );
       }
 
-      // Build a map of backups by workspace name (ImageStream data takes precedence)
+      // Build a map of backups by image URL (to support multiple backups per workspace)
       const backupMap = new Map<string, BackupItem>();
 
       // Add ImageStream results first (these have full data including size)
@@ -362,7 +362,7 @@ export class RegistryApiService {
           mergedLabels[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR] =
             dwAnnotations[DEVWORKSPACE_BACKUP_ANNOTATIONS.LAST_BACKUP_ERROR];
         }
-        backupMap.set(image.workspaceName, {
+        backupMap.set(image.imageUrl, {
           ...image,
           workspaceExists: exists,
           labels: mergedLabels,
@@ -373,9 +373,13 @@ export class RegistryApiService {
       // This handles external registry backups
       for (const dw of devworkspacesWithBackups) {
         const wsName = dw.metadata.name;
-        if (!backupMap.has(wsName)) {
+        // Check if this workspace already has backups from ImageStreams
+        const hasImageStreamBackup = Array.from(backupMap.values()).some(
+          backup => backup.workspaceName === wsName,
+        );
+        if (!hasImageStreamBackup) {
           const backupItem = this.buildBackupItemFromAnnotations(dw, registryPath, namespace);
-          backupMap.set(wsName, backupItem);
+          backupMap.set(backupItem.imageUrl, backupItem);
         }
       }
 
