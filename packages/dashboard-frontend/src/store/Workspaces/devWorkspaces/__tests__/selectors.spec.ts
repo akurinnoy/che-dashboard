@@ -24,6 +24,7 @@ import {
   selectRunningDevWorkspaces,
   selectRunningDevWorkspacesLimitExceeded,
   selectStartedWorkspaces,
+  selectWorkspacesWithAgents,
 } from '@/store/Workspaces/devWorkspaces/selectors';
 
 describe('DevWorkspaces Selectors', () => {
@@ -88,5 +89,121 @@ describe('DevWorkspaces Selectors', () => {
   it('should select devWorkspace warnings', () => {
     const result = selectDevWorkspaceWarnings(mockState);
     expect(result).toEqual({ '2': 'This is a warning' });
+  });
+
+  describe('selectWorkspacesWithAgents', () => {
+    it('should select workspaces with agent-session annotation', () => {
+      const stateWithAgent = {
+        devWorkspaces: {
+          workspaces: [
+            {
+              metadata: {
+                uid: '1',
+                annotations: { 'che.eclipse.org/agent-session': 'session-123' },
+              },
+            },
+            {
+              metadata: {
+                uid: '2',
+                annotations: { 'che.eclipse.org/agent-session': 'session-456' },
+              },
+            },
+          ] as devfileApi.DevWorkspace[],
+        } as DevWorkspacesState,
+      } as Partial<RootState> as RootState;
+
+      const result = selectWorkspacesWithAgents(stateWithAgent);
+      expect(result).toHaveLength(2);
+      expect(result[0].metadata.uid).toBe('1');
+      expect(result[1].metadata.uid).toBe('2');
+    });
+
+    it('should filter out workspaces without agent annotations', () => {
+      const stateWithMixed = {
+        devWorkspaces: {
+          workspaces: [
+            {
+              metadata: {
+                uid: '1',
+                annotations: { 'che.eclipse.org/agent-session': 'session-123' },
+              },
+            },
+            {
+              metadata: {
+                uid: '2',
+                annotations: {},
+              },
+            },
+            {
+              metadata: {
+                uid: '3',
+              },
+            },
+          ] as devfileApi.DevWorkspace[],
+        } as DevWorkspacesState,
+      } as Partial<RootState> as RootState;
+
+      const result = selectWorkspacesWithAgents(stateWithMixed);
+      expect(result).toHaveLength(1);
+      expect(result[0].metadata.uid).toBe('1');
+    });
+
+    it('should return empty array for empty workspace list', () => {
+      const emptyState = {
+        devWorkspaces: {
+          workspaces: [] as devfileApi.DevWorkspace[],
+        } as DevWorkspacesState,
+      } as Partial<RootState> as RootState;
+
+      const result = selectWorkspacesWithAgents(emptyState);
+      expect(result).toEqual([]);
+    });
+
+    it('should select workspace with partial agent annotations', () => {
+      const stateWithPartial = {
+        devWorkspaces: {
+          workspaces: [
+            {
+              metadata: {
+                uid: '1',
+                annotations: {
+                  'che.eclipse.org/agent-session': 'session-123',
+                  // agent-status is missing but workspace should still be selected
+                },
+              },
+            },
+          ] as devfileApi.DevWorkspace[],
+        } as DevWorkspacesState,
+      } as Partial<RootState> as RootState;
+
+      const result = selectWorkspacesWithAgents(stateWithPartial);
+      expect(result).toHaveLength(1);
+      expect(result[0].metadata.uid).toBe('1');
+    });
+
+    it('should filter out workspace with empty-string agent-session', () => {
+      const stateWithEmpty = {
+        devWorkspaces: {
+          workspaces: [
+            {
+              metadata: {
+                uid: '1',
+                annotations: { 'che.eclipse.org/agent-session': '' },
+              },
+            },
+            {
+              metadata: {
+                uid: '2',
+                annotations: { 'che.eclipse.org/agent-session': 'session-456' },
+              },
+            },
+          ] as devfileApi.DevWorkspace[],
+        } as DevWorkspacesState,
+      } as Partial<RootState> as RootState;
+
+      const result = selectWorkspacesWithAgents(stateWithEmpty);
+      expect(result).toHaveLength(1);
+      expect(result[0].metadata.uid).toBe('2');
+    });
   });
 });

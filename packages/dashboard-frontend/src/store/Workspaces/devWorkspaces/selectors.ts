@@ -51,3 +51,10 @@ export const selectStartedWorkspaces = createSelector(
 );
 
 export const selectDevWorkspaceWarnings = createSelector(selectState, state => state.warnings);
+
+export const selectWorkspacesWithAgents = createSelector(selectDevWorkspacesState, state =>
+  state.workspaces.filter(ws => {
+    const session = ws.metadata.annotations?.['che.eclipse.org/agent-session'];
+    return session !== undefined && session !== '';
+  }),
+);
