@@ -34,6 +34,7 @@ export class NavigationMainList extends React.PureComponent<Props> {
     return [
       { to: ROUTE.GET_STARTED, label: 'Create Workspace' },
       { to: ROUTE.WORKSPACES, label: `Workspaces (${allWorkspacesNumber})` },
+      { to: ROUTE.AGENT_ACTIVITY, label: 'Agent Activity' },
     ];
   }
 
