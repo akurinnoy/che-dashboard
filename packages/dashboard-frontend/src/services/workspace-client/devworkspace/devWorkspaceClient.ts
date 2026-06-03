@@ -35,7 +35,7 @@ import {
 } from '@/services/devfileApi/devWorkspace/spec/template';
 import { delay } from '@/services/helpers/delay';
 import { isWebTerminal } from '@/services/helpers/devworkspace';
-import { DevWorkspaceStatus } from '@/services/helpers/types';
+import { AgentStatus, DevWorkspaceStatus } from '@/services/helpers/types';
 import { fetchData } from '@/services/registry/fetchData';
 import { WorkspaceAdapter } from '@/services/workspace-adapter';
 import { DevWorkspaceDefaultPluginsHandler } from '@/services/workspace-client/devworkspace/DevWorkspaceDefaultPluginsHandler';
@@ -122,6 +122,46 @@ export class DevWorkspaceClient {
       }
     }
     return { workspaces, resourceVersion };
+  }
+
+  async getWorkspacesWithAgents(defaultNamespace: string): Promise<AgentStatus[]> {
+    const { workspaces } = await this.getAllWorkspaces(defaultNamespace);
+    const agentStatuses: AgentStatus[] = [];
+
+    for (const workspace of workspaces) {
+      const containers = workspace.spec?.template?.components?.filter(c => c.container) || [];
+
+      for (const component of containers) {
+        if (component.container) {
+          const status = workspace.status?.phase;
+          let agentStatus: 'active' | 'idle' | 'error' | 'unknown' = 'unknown';
+
+          if (status === DevWorkspaceStatus.RUNNING) {
+            agentStatus = 'active';
+          } else if (status === DevWorkspaceStatus.STOPPED) {
+            agentStatus = 'idle';
+          } else if (
+            status === DevWorkspaceStatus.FAILED ||
+            status === DevWorkspaceStatus.FAILING
+          ) {
+            agentStatus = 'error';
+          }
+
+          agentStatuses.push({
+            workspaceName: workspace.metadata.name,
+            workspaceId: workspace.metadata.uid || workspace.metadata.name,
+            namespace: workspace.metadata.namespace || defaultNamespace,
+            agentName: component.name,
+            agentStatus,
+            lastActivity: new Date().toISOString(),
+            containerName: component.container.image,
+            podName: workspace.status?.devworkspaceId,
+          });
+        }
+      }
+    }
+
+    return agentStatuses;
   }
 
   async getWorkspaceByName(
