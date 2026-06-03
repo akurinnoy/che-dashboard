@@ -13,6 +13,7 @@
 import React from 'react';
 import { Params, Route, Routes } from 'react-router-dom';
 
+import AgentActivityContainer from '@/containers/AgentActivity';
 import GetStartedContainer from '@/containers/GetStarted';
 import RestoreFromBackupContainer from '@/containers/RestoreFromBackup';
 import UserPreferencesContainer from '@/containers/UserPreferences';
@@ -33,6 +34,7 @@ export enum ROUTE {
   FACTORY_LOADER_URL = '/load-factory?url=:url',
   USER_PREFERENCES = '/user-preferences',
   USER_PREFERENCES_TAB = '/user-preferences?tab=:tabId',
+  AGENT_ACTIVITY = '/agent-activity',
 }
 
 export type WorkspaceRouteParams = Params<'namespace' | 'workspaceName'>;
@@ -60,6 +62,11 @@ export function AppRoutes(): React.ReactElement {
         key="user-preferences"
         path={ROUTE.USER_PREFERENCES}
         element={<UserPreferencesContainer />}
+      />
+      <Route
+        key="agent-activity"
+        path={ROUTE.AGENT_ACTIVITY}
+        element={<AgentActivityContainer />}
       />
       <Route key="redirects" path="*" element={<Redirects />} />
     </Routes>
