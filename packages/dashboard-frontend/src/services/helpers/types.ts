@@ -137,3 +137,14 @@ export enum UserPreferencesTab {
   PERSONAL_ACCESS_TOKENS = 'PersonalAccessTokens',
   SSH_KEYS = 'SshKeys',
 }
+
+export interface AgentStatus {
+  workspaceName: string;
+  workspaceId: string;
+  namespace: string;
+  agentName: string;
+  agentStatus: 'active' | 'idle' | 'error' | 'unknown';
+  lastActivity: string;
+  containerName?: string;
+  podName?: string;
+}
