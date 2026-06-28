@@ -1,0 +1,2 @@
+[    7906ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ https://eclipse-che.apps-crc.testing/dashboard/:0
+[    7928ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ https://eclipse-che.apps-crc.testing/favicon.ico:0

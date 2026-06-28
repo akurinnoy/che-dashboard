@@ -55,20 +55,18 @@ export const createWorkspaceFromResources =
 
       dispatch(devWorkspacesRequestAction());
 
+      const aiTools = selectAiTools(state);
+
       // Inject AI tools into the DevWorkspace if selected
-      if (params.aiProviders && params.aiProviders.length > 0) {
-        const aiTools = selectAiTools(state);
-        if (aiTools.length > 0) {
-          for (const providerId of params.aiProviders) {
-            devWorkspace = addAiToolToWorkspace(devWorkspace, providerId, aiTools);
-          }
+      if (params.aiProviders && params.aiProviders.length > 0 && aiTools.length > 0) {
+        for (const providerId of params.aiProviders) {
+          devWorkspace = addAiToolToWorkspace(devWorkspace, providerId, aiTools);
         }
       }
 
       // Inject AI tools declared in devfile attribute (tools.che.io/inject)
       const injectAttr = devWorkspace.spec?.template?.attributes?.['tools.che.io/inject'];
       if (typeof injectAttr === 'string') {
-        const aiTools = selectAiTools(state);
         const attrTools = parseToolsInjectAttribute(injectAttr, aiTools);
         for (const { providerId } of attrTools) {
           devWorkspace = addAiToolToWorkspace(devWorkspace, providerId, aiTools);

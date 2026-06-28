@@ -1171,5 +1171,30 @@ describe('aiTools', () => {
     it('should export TOOLS_INJECT_ATTRIBUTE constant', () => {
       expect(TOOLS_INJECT_ATTRIBUTE).toBe('tools.che.io/inject');
     });
+
+    it('should handle repeated commas and empty segments', () => {
+      const result = parseToolsInjectAttribute('claude-code,,,gemini-cli,', ALL_TOOLS);
+      expect(result).toEqual([
+        { providerId: 'anthropic/claude', slug: 'claude-code' },
+        { providerId: 'google/gemini', slug: 'gemini-cli' },
+      ]);
+    });
+
+    it('should return empty array for comma-only input', () => {
+      expect(parseToolsInjectAttribute(',,,', ALL_TOOLS)).toEqual([]);
+    });
+
+    it('should return empty array when allTools is empty', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const result = parseToolsInjectAttribute('claude-code', []);
+      expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should handle single tool name', () => {
+      const result = parseToolsInjectAttribute('claude-code', ALL_TOOLS);
+      expect(result).toEqual([{ providerId: 'anthropic/claude', slug: 'claude-code' }]);
+    });
   });
 });
