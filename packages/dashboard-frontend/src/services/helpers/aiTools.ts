@@ -34,6 +34,38 @@ export const ADMIN_MANAGEABLE_ATTRIBUTE = 'che.eclipse.org/admin-manageable';
  */
 export const PENDING_CLEANUP_ANNOTATION = 'che.eclipse.org/pending-ai-cleanup';
 
+/** Devfile attribute key for declarative tool injection. */
+export const TOOLS_INJECT_ATTRIBUTE = 'tools.che.io/inject';
+
+/**
+ * Parses the `tools.che.io/inject` devfile attribute value and resolves
+ * each tool name to its provider ID using the tool registry.
+ *
+ * Unknown tool names are logged as warnings and skipped.
+ */
+export function parseToolsInjectAttribute(
+  attr: string | undefined,
+  allTools: api.AiToolDefinition[],
+): Array<{ providerId: string; slug: string }> {
+  if (!attr || !attr.trim()) {
+    return [];
+  }
+
+  const slugs = [...new Set(attr.split(',').map(s => s.trim()).filter(Boolean))];
+  const matched: Array<{ providerId: string; slug: string }> = [];
+
+  for (const slug of slugs) {
+    const tool = allTools.find(t => getToolSlug(t) === slug);
+    if (tool) {
+      matched.push({ providerId: tool.providerId, slug });
+    } else {
+      console.warn(`tools.che.io/inject: unknown tool "${slug}", skipping`);
+    }
+  }
+
+  return matched;
+}
+
 /**
  * Strips the tag or digest suffix from a container image reference.
  * e.g. 'quay.io/example/claude-code:next' → 'quay.io/example/claude-code'

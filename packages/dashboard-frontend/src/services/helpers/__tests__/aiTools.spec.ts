@@ -19,11 +19,13 @@ import {
   ADMIN_MANAGEABLE_ATTRIBUTE,
   getInjectedAiToolIds,
   getInjectedAiToolNames,
+  parseToolsInjectAttribute,
   PENDING_CLEANUP_ANNOTATION,
   removeAiToolFromWorkspace,
   sanitizeStaleAiTools,
   stripImageTag,
   toolCommandIds,
+  TOOLS_INJECT_ATTRIBUTE,
   updateOutdatedAiTools,
 } from '@/services/helpers/aiTools';
 import { constructWorkspace } from '@/services/workspace-adapter';
@@ -1116,6 +1118,58 @@ describe('aiTools', () => {
         c => c.name === 'claude-code-injector',
       ) as { container?: { image?: string } } | undefined;
       expect(injector!.container!.image).toBe('quay.io/example/claude-code:3.21');
+    });
+  });
+
+  describe('parseToolsInjectAttribute', () => {
+    it('should parse comma-separated tool names and match to providers', () => {
+      const result = parseToolsInjectAttribute('claude-code,gemini-cli', ALL_TOOLS);
+      expect(result).toEqual([
+        { providerId: 'anthropic/claude', slug: 'claude-code' },
+        { providerId: 'google/gemini', slug: 'gemini-cli' },
+      ]);
+    });
+
+    it('should trim whitespace around tool names', () => {
+      const result = parseToolsInjectAttribute('claude-code , gemini-cli ', ALL_TOOLS);
+      expect(result).toEqual([
+        { providerId: 'anthropic/claude', slug: 'claude-code' },
+        { providerId: 'google/gemini', slug: 'gemini-cli' },
+      ]);
+    });
+
+    it('should deduplicate tool names', () => {
+      const result = parseToolsInjectAttribute('claude-code,gemini-cli,claude-code', ALL_TOOLS);
+      expect(result).toEqual([
+        { providerId: 'anthropic/claude', slug: 'claude-code' },
+        { providerId: 'google/gemini', slug: 'gemini-cli' },
+      ]);
+    });
+
+    it('should skip unknown tool names', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const result = parseToolsInjectAttribute('claude-code,unknown-tool', ALL_TOOLS);
+      expect(result).toEqual([{ providerId: 'anthropic/claude', slug: 'claude-code' }]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('unknown-tool'),
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should return empty array for undefined', () => {
+      expect(parseToolsInjectAttribute(undefined, ALL_TOOLS)).toEqual([]);
+    });
+
+    it('should return empty array for empty string', () => {
+      expect(parseToolsInjectAttribute('', ALL_TOOLS)).toEqual([]);
+    });
+
+    it('should return empty array for whitespace-only string', () => {
+      expect(parseToolsInjectAttribute('  ', ALL_TOOLS)).toEqual([]);
+    });
+
+    it('should export TOOLS_INJECT_ATTRIBUTE constant', () => {
+      expect(TOOLS_INJECT_ATTRIBUTE).toBe('tools.che.io/inject');
     });
   });
 });
