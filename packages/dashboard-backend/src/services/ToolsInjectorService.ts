@@ -22,6 +22,7 @@ const TOOLS_INJECTOR_VOLUME = 'injected-tools';
 const TOOLS_INJECTOR_VOLUME_SIZE = '256Mi';
 const BUNDLE_MEMORY_BUMP_MI = 512;
 const DEFAULT_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+const INJECTED_TOOLS_VOLUME_MOUNT = { name: 'injected-tools', path: '/injected-tools' };
 
 export interface ToolDefinition {
   description: string;
@@ -157,7 +158,7 @@ export function applyToolsInjection(
         args,
         memoryLimit: tool.injector.memoryLimit,
         mountSources: false,
-        volumeMounts: [{ name: TOOLS_INJECTOR_VOLUME, path: '/injected-tools' }],
+        volumeMounts: [{ name: TOOLS_INJECTOR_VOLUME, path: '/injected-tools' as const }],
       },
     });
 
@@ -204,10 +205,7 @@ export function applyToolsInjection(
         vm => vm.name === TOOLS_INJECTOR_VOLUME,
       )
     ) {
-      (container.volumeMounts as Array<Record<string, unknown>>).push({
-        name: TOOLS_INJECTOR_VOLUME,
-        path: '/injected-tools',
-      });
+      (container.volumeMounts as Array<Record<string, unknown>>).push(INJECTED_TOOLS_VOLUME_MOUNT);
     }
 
     // PATH env var
@@ -259,9 +257,10 @@ export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
 
     if (!registry && imagePath.includes('/')) {
       const parts = imagePath.split('/');
+      // Assumes tools-injector convention: <registry>/<org>/tools-injector/<tool>
       registry = parts.slice(0, -2).join('/');
     }
-    if (imageTag) {
+    if (!tag && imageTag) {
       tag = imageTag;
     }
 
@@ -272,7 +271,7 @@ export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
       binary: tool.binary,
       injector: { memoryLimit: '1024Mi' },
       editor: {
-        volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+        volumeMounts: [INJECTED_TOOLS_VOLUME_MOUNT],
         env: tool.envVarName ? [{ name: tool.envVarName, value: '' }] : [],
         memoryLimit: undefined,
         postStart: tool.setupCommand ?? '',
