@@ -296,6 +296,97 @@ export function isV2Registry(registry: unknown): registry is api.IAiRegistryV2 {
 const UNIFIED_CM_LABEL = 'app.kubernetes.io/component=ai-tool-registry,app.kubernetes.io/part-of=che.eclipse.org';
 const TOOLS_INJECTOR_CM_LABEL = 'app.kubernetes.io/part-of=tools-injector';
 
+export function sanitizeStaleComponents(
+  devworkspace: Record<string, unknown>,
+  registry: ToolsRegistry,
+): boolean {
+  const template = (devworkspace as any).spec?.template;
+  if (!template) return false;
+
+  let modified = false;
+  const knownTools = new Set(Object.keys(registry.tools));
+  const components = template.components as Array<Record<string, unknown>> ?? [];
+  const commands = template.commands as Array<Record<string, unknown>> ?? [];
+
+  // Remove injector components for tools not in registry
+  const staleInjectors = components.filter((c) => {
+    const name = c.name as string;
+    if (!name?.endsWith('-injector')) return false;
+    const toolName = name.replace(/-injector$/, '');
+    return !knownTools.has(toolName);
+  });
+
+  for (const stale of staleInjectors) {
+    const idx = components.indexOf(stale);
+    if (idx >= 0) {
+      components.splice(idx, 1);
+      modified = true;
+    }
+  }
+
+  // Remove legacy symlink-* commands and any orphaned install/setup commands
+  const staleCommands = commands.filter((cmd) => {
+    const id = (cmd as any).id as string;
+    if (!id) return false;
+    if (id.startsWith('symlink-')) return true;
+    if (id.startsWith('install-') || id.startsWith('setup-')) {
+      const toolName = id.replace(/^(install|setup|symlink)-/, '');
+      return !knownTools.has(toolName) || !components.some(c => c.name === `${toolName}-injector`);
+    }
+    return false;
+  });
+
+  for (const stale of staleCommands) {
+    const idx = commands.indexOf(stale);
+    if (idx >= 0) {
+      commands.splice(idx, 1);
+      modified = true;
+    }
+  }
+
+  // Clean up events referencing removed commands
+  const events = template.events as Record<string, string[]> ?? {};
+  for (const eventType of ['preStart', 'postStart'] as const) {
+    if (events[eventType]) {
+      const before = events[eventType].length;
+      events[eventType] = events[eventType].filter(
+        (id: string) => commands.some((cmd: any) => cmd.id === id) || !id.startsWith('install-') && !id.startsWith('setup-') && !id.startsWith('symlink-'),
+      );
+      if (events[eventType].length !== before) modified = true;
+    }
+  }
+
+  return modified;
+}
+
+export function reconcileToolImages(
+  devworkspace: Record<string, unknown>,
+  registry: ToolsRegistry,
+): boolean {
+  const template = (devworkspace as any).spec?.template;
+  if (!template) return false;
+
+  let modified = false;
+  const components = template.components as Array<Record<string, unknown>> ?? [];
+
+  for (const [toolName, toolDef] of Object.entries(registry.tools)) {
+    const compName = `${toolName}-injector`;
+    const comp = components.find(c => c.name === compName);
+    if (!comp) continue;
+
+    const container = comp.container as Record<string, unknown> | undefined;
+    if (!container?.image) continue;
+
+    const expectedImage = `${registry.registry}/tools-injector/${toolName}:${registry.tag}`;
+    if (container.image !== expectedImage) {
+      container.image = expectedImage;
+      modified = true;
+    }
+  }
+
+  return modified;
+}
+
 export async function loadToolsRegistry(
   kubeConfig: k8s.KubeConfig,
   namespace: string,

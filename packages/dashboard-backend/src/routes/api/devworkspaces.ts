@@ -25,7 +25,12 @@ import { getDevWorkspaceClient, getKubeConfig } from '@/routes/api/helpers/getDe
 import { getToken } from '@/routes/api/helpers/getToken';
 import { getSchema } from '@/services/helpers';
 import { PostStartInjector } from '@/services/PostStartInjector';
-import { applyToolsInjection, loadToolsRegistry } from '@/services/ToolsInjectorService';
+import {
+  applyToolsInjection,
+  loadToolsRegistry,
+  sanitizeStaleComponents,
+  reconcileToolImages,
+} from '@/services/ToolsInjectorService';
 
 const tags = ['Devworkspace'];
 
@@ -127,6 +132,25 @@ export function registerDevworkspacesRoutes(instance: FastifyInstance) {
             dwClient.kubeConfigApi,
             dwClient.podmanApi,
           );
+        }
+
+        // After successful PATCH, run lifecycle management
+        const registry = await loadToolsRegistry(getKubeConfig(token), namespace);
+        if (registry) {
+          let needsUpdate = false;
+          needsUpdate = sanitizeStaleComponents(devWorkspace as unknown as Record<string, unknown>, registry) || needsUpdate;
+          needsUpdate = reconcileToolImages(devWorkspace as unknown as Record<string, unknown>, registry) || needsUpdate;
+          if (needsUpdate) {
+            // Apply the sanitized/reconciled spec as additional patches
+            // This is a best-effort operation — don't fail the PATCH if lifecycle fails
+            try {
+              await dwClient.devworkspaceApi.patch(namespace, workspaceName, [
+                { op: 'replace', path: '/spec/template', value: devWorkspace.spec?.template },
+              ]);
+            } catch (e) {
+              console.warn('[ToolsInjectorService] Lifecycle reconciliation failed:', e);
+            }
+          }
         }
 
         reply.headers(headers).send(devWorkspace);
