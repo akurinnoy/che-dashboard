@@ -170,8 +170,8 @@ describe('ToolsInjectorService', () => {
       expect(injector).toBeDefined();
       const container = injector?.container as Record<string, unknown>;
       expect(container.image).toBe('quay.io/che-incubator/tools-injector/claude-code:next');
-      expect(container.command).toEqual(['/bin/cp']);
-      expect(container.args).toEqual(['/usr/local/bin/claude', '/injected-tools/claude']);
+      expect(container.command).toEqual(['/bin/sh']);
+      expect(container.args).toEqual(['-c', 'mkdir -p /injected-tools/bin && cp /usr/local/bin/claude /injected-tools/bin/claude']);
       expect(container.memoryLimit).toBe('128Mi');
     });
 
@@ -186,7 +186,7 @@ describe('ToolsInjectorService', () => {
       expect(container.command).toEqual(['/bin/sh']);
       expect(container.args).toEqual([
         '-c',
-        'cp -a /opt/gemini-cli/. /injected-tools/gemini-cli/',
+        'mkdir -p /injected-tools/bin && cp -a /opt/gemini-cli/. /injected-tools/gemini-cli/ && ln -sf /injected-tools/gemini-cli/bin/gemini /injected-tools/bin/gemini',
       ]);
       expect(container.memoryLimit).toBe('256Mi');
     });
@@ -257,45 +257,45 @@ describe('ToolsInjectorService', () => {
       expect(dw.spec.template.events.preStart).toContain('install-tmux');
     });
 
-    it('should add postStart events', () => {
+    it('should not add postStart event for tools without editor.postStart', () => {
       const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'claude-code' });
       applyToolsInjection(dw, SAMPLE_REGISTRY);
-      expect(dw.spec.template.events.postStart).toContain('setup-claude-code');
+      expect(dw.spec.template.events.postStart).toBeUndefined();
     });
 
-    it('should add install and setup commands', () => {
+    it('should add postStart event for tools with editor.postStart', () => {
+      const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'gemini-cli' });
+      applyToolsInjection(dw, SAMPLE_REGISTRY);
+      expect(dw.spec.template.events.postStart).toContain('setup-gemini-cli');
+    });
+
+    it('should add install command', () => {
       const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'claude-code' });
       applyToolsInjection(dw, SAMPLE_REGISTRY);
       const installCmd = dw.spec.template.commands.find(
         (c: Record<string, unknown>) => (c as { id: string }).id === 'install-claude-code',
       );
       expect(installCmd).toBeDefined();
-      const setupCmd = dw.spec.template.commands.find(
-        (c: Record<string, unknown>) => (c as { id: string }).id === 'setup-claude-code',
-      );
-      expect(setupCmd).toBeDefined();
     });
 
-    it('should generate symlink in postStart for init-pattern tool', () => {
+    it('should copy init-pattern binary directly to /injected-tools/bin/', () => {
       const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'claude-code' });
       applyToolsInjection(dw, SAMPLE_REGISTRY);
-      const setupCmd = dw.spec.template.commands.find(
-        (c: Record<string, unknown>) => (c as { id: string }).id === 'setup-claude-code',
+      const injector = dw.spec.template.components.find(
+        (c: Record<string, unknown>) => c.name === 'claude-code-injector',
       ) as unknown as Record<string, unknown>;
-      const exec = setupCmd.exec as Record<string, unknown>;
-      expect(exec.commandLine).toContain('ln -sf /injected-tools/claude /injected-tools/bin/claude');
+      const container = injector.container as Record<string, unknown>;
+      expect(container.args).toEqual(['-c', 'mkdir -p /injected-tools/bin && cp /usr/local/bin/claude /injected-tools/bin/claude']);
     });
 
-    it('should generate symlink in postStart for bundle-pattern tool', () => {
+    it('should copy and symlink bundle-pattern in init container', () => {
       const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'gemini-cli' });
       applyToolsInjection(dw, SAMPLE_REGISTRY);
-      const setupCmd = dw.spec.template.commands.find(
-        (c: Record<string, unknown>) => (c as { id: string }).id === 'setup-gemini-cli',
+      const injector = dw.spec.template.components.find(
+        (c: Record<string, unknown>) => c.name === 'gemini-cli-injector',
       ) as unknown as Record<string, unknown>;
-      const exec = setupCmd.exec as Record<string, unknown>;
-      expect(exec.commandLine).toContain(
-        'ln -sf /injected-tools/gemini-cli/bin/gemini /injected-tools/bin/gemini',
-      );
+      const container = injector.container as Record<string, unknown>;
+      expect((container.args as string[])[1]).toContain('ln -sf /injected-tools/gemini-cli/bin/gemini /injected-tools/bin/gemini');
     });
 
     it('should include tool postStart commands', () => {

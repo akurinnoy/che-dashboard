@@ -72,32 +72,21 @@ function buildInjectorCommand(
 ): { command: string[]; args: string[] } {
   if (tool.pattern === 'init') {
     return {
-      command: ['/bin/cp'],
-      args: [tool.src, `/injected-tools/${tool.binary}`],
+      command: ['/bin/sh'],
+      args: ['-c', `mkdir -p /injected-tools/bin && cp ${tool.src} /injected-tools/bin/${tool.binary}`],
     };
   }
   return {
     command: ['/bin/sh'],
-    args: ['-c', `cp -a ${tool.src}/. /injected-tools/${toolName}/`],
+    args: ['-c', `mkdir -p /injected-tools/bin && cp -a ${tool.src}/. /injected-tools/${toolName}/ && ln -sf /injected-tools/${toolName}/bin/${tool.binary} /injected-tools/bin/${tool.binary}`],
   };
 }
 
-function buildPostStartCommandLine(tool: ToolDefinition, toolName: string): string {
-  const parts: string[] = ['mkdir -p /injected-tools/bin'];
-
-  if (tool.pattern === 'init') {
-    parts.push(`ln -sf /injected-tools/${tool.binary} /injected-tools/bin/${tool.binary}`);
-  } else {
-    parts.push(
-      `ln -sf /injected-tools/${toolName}/bin/${tool.binary} /injected-tools/bin/${tool.binary}`,
-    );
+function buildPostStartCommandLine(tool: ToolDefinition): string | null {
+  if (!tool.editor.postStart) {
+    return null;
   }
-
-  if (tool.editor.postStart) {
-    parts.push(`(${tool.editor.postStart}) 2>/dev/null || true`);
-  }
-
-  return parts.join(' && ');
+  return `(${tool.editor.postStart}) 2>/dev/null || true`;
 }
 
 export function applyToolsInjection(
@@ -177,13 +166,14 @@ export function applyToolsInjection(
       apply: { component: compName },
     });
 
-    // Add setup command (postStart exec)
-    if (editor) {
+    // Add setup command (postStart exec) only if tool has postStart setup
+    const postStartCmd = buildPostStartCommandLine(tool);
+    if (postStartCmd && editor) {
       template.commands.push({
         id: setupCmdId,
         exec: {
           component: editor.name,
-          commandLine: buildPostStartCommandLine(tool, toolName),
+          commandLine: postStartCmd,
         },
       });
     }
@@ -194,7 +184,7 @@ export function applyToolsInjection(
       template.events.preStart.push(installCmdId);
     }
 
-    if (editor) {
+    if (postStartCmd && editor) {
       template.events.postStart = template.events.postStart ?? [];
       if (!template.events.postStart.includes(setupCmdId)) {
         template.events.postStart.push(setupCmdId);
