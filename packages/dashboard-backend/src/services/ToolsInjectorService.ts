@@ -10,7 +10,12 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
+import * as k8s from '@kubernetes/client-node';
+
+import { logger } from '@/utils/logger';
+
 export const TOOLS_INJECT_ATTRIBUTE = 'tools.che.io/inject';
+const TOOLS_INJECTOR_REGISTRY_CM = 'tools-injector-registry';
 
 const TOOLS_INJECTOR_VOLUME = 'injected-tools';
 const TOOLS_INJECTOR_VOLUME_SIZE = '256Mi';
@@ -255,5 +260,25 @@ export function applyToolsInjection(
     if (memoryMi > 0) {
       container.memoryLimit = `${memoryMi}Mi`;
     }
+  }
+}
+
+export async function loadToolsRegistry(
+  kubeConfig: k8s.KubeConfig,
+  namespace: string,
+): Promise<ToolsRegistry | null> {
+  try {
+    const coreV1 = kubeConfig.makeApiClient(k8s.CoreV1Api);
+    const response = await coreV1.readNamespacedConfigMap({
+      name: TOOLS_INJECTOR_REGISTRY_CM,
+      namespace,
+    });
+    const data = response?.data?.['registry.json'];
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as ToolsRegistry;
+  } catch {
+    return null;
   }
 }

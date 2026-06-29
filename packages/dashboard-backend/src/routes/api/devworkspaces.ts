@@ -21,10 +21,11 @@ import {
   namespacedWorkspaceSchema,
 } from '@/constants/schemas';
 import { restParams } from '@/models';
-import { getDevWorkspaceClient } from '@/routes/api/helpers/getDevWorkspaceClient';
+import { getDevWorkspaceClient, getKubeConfig } from '@/routes/api/helpers/getDevWorkspaceClient';
 import { getToken } from '@/routes/api/helpers/getToken';
 import { getSchema } from '@/services/helpers';
 import { PostStartInjector } from '@/services/PostStartInjector';
+import { applyToolsInjection, loadToolsRegistry } from '@/services/ToolsInjectorService';
 
 const tags = ['Devworkspace'];
 
@@ -57,6 +58,10 @@ export function registerDevworkspacesRoutes(instance: FastifyInstance) {
 
         const token = getToken(request);
         const dwClient = getDevWorkspaceClient(token);
+
+        // Inject tools declared via tools.che.io/inject devfile attribute
+        const registry = await loadToolsRegistry(getKubeConfig(token), namespace);
+        applyToolsInjection(devworkspace, registry);
 
         const { headers, devWorkspace } = await dwClient.devworkspaceApi.create(
           devworkspace,
