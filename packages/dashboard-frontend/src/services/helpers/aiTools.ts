@@ -25,6 +25,9 @@ type DevWorkspaceCommand = V1alpha2DevWorkspaceSpecTemplateCommands;
 /** Attribute key used to mark dashboard-managed AI tool components and commands. */
 export const ADMIN_MANAGEABLE_ATTRIBUTE = 'che.eclipse.org/admin-manageable';
 
+/** Attribute key used by the backend ToolsInjectorService to inject AI tools. */
+export const TOOLS_INJECT_ATTRIBUTE = 'tools.che.io/inject';
+
 /**
  * Annotation key used to track pending cleanup commands.
  * Stores a comma-separated list of tool slugs whose cleanup commands
@@ -185,10 +188,9 @@ function buildCleanupCommandLine(tool: api.AiToolDefinition): string {
 }
 
 /**
- * Returns a cloned DevWorkspace spec with the given AI tool injector added.
- *
- * preStart  → install-{toolId}  apply command  (copies binary via init container)
- * postStart → symlink-{toolId}  exec command   (creates /injected-tools/bin symlink + PATH)
+ * Returns a cloned DevWorkspace spec with the given AI tool slug added to the
+ * tools.che.io/inject attribute. The backend ToolsInjectorService handles all
+ * spec mutation (init containers, volumes, commands, env vars).
  *
  * Accepts either a Workspace adapter or a raw DevWorkspace object.
  */
@@ -199,7 +201,10 @@ export function addAiToolToWorkspace(
 ): devfileApi.DevWorkspace {
   const tool = allTools.find(t => t.providerId === toolId);
   if (!tool) {
-    throw new Error(`Unknown AI tool: ${toolId}`);
+    console.warn(`[aiTools] Unknown tool providerId: ${toolId}`);
+    const raw =
+      'ref' in workspaceOrDevWorkspace ? workspaceOrDevWorkspace.ref : workspaceOrDevWorkspace;
+    return JSON.parse(JSON.stringify(raw));
   }
 
   const slug = getToolSlug(tool);
@@ -207,157 +212,37 @@ export function addAiToolToWorkspace(
     'ref' in workspaceOrDevWorkspace ? workspaceOrDevWorkspace.ref : workspaceOrDevWorkspace;
   const cloned: devfileApi.DevWorkspace = JSON.parse(JSON.stringify(raw));
   const template = cloned.spec.template;
-  template.components = template.components ?? [];
-  template.commands = template.commands ?? [];
 
-  const compName = `${slug}-injector`;
-  const {
-    install: installCmdId,
-    symlink: symlinkCmdId,
-    run: runCmdId,
-    cleanup: cleanupCmdId,
-  } = toolCommandIds(slug);
-
-  // Remove existing injector for this tool (idempotent)
-  template.components = template.components.filter(c => c.name !== compName);
-  template.commands = template.commands.filter(
-    (c: { id?: string }) =>
-      c.id !== installCmdId && c.id !== symlinkCmdId && c.id !== runCmdId && c.id !== cleanupCmdId,
-  );
-  if (template.events?.preStart) {
-    template.events.preStart = template.events.preStart.filter((e: string) => e !== installCmdId);
-  }
-  if (template.events?.postStart) {
-    template.events.postStart = template.events.postStart.filter(
-      (e: string) => e !== symlinkCmdId && e !== cleanupCmdId,
-    );
+  if (!template) {
+    return cloned;
   }
 
-  // Ensure injected-tools volume exists
-  if (!template.components.some(c => c.name === 'injected-tools')) {
-    template.components.push({
-      name: 'injected-tools',
-      attributes: { [ADMIN_MANAGEABLE_ATTRIBUTE]: true },
-      volume: { size: '512Mi' },
-    } as unknown as DevWorkspaceComponent);
+  // Ensure attributes object exists
+  if (!template.attributes) {
+    template.attributes = {};
   }
 
-  // Add injector component (init container)
-  if (tool.pattern === 'init') {
-    template.components.push({
-      name: compName,
-      attributes: { [ADMIN_MANAGEABLE_ATTRIBUTE]: true },
-      container: {
-        image: tool.injectorImage,
-        command: ['/bin/sh'],
-        args: [
-          '-c',
-          `rm -f /injected-tools/bin/${tool.binary} /injected-tools/bin/${tool.binary}-bin 2>/dev/null; mkdir -p /injected-tools/bin && cp /usr/local/bin/${tool.binary} /injected-tools/bin/${tool.binary} && { test -f /usr/local/bin/${tool.binary}-bin && cp /usr/local/bin/${tool.binary}-bin /injected-tools/bin/${tool.binary}-bin || true; }`,
-        ],
-        memoryLimit: '1024Mi',
-        mountSources: false,
-        volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
-      },
-    } as unknown as DevWorkspaceComponent);
-  } else {
-    template.components.push({
-      name: compName,
-      attributes: { [ADMIN_MANAGEABLE_ATTRIBUTE]: true },
-      container: {
-        image: tool.injectorImage,
-        command: ['/bin/sh'],
-        args: [
-          '-c',
-          `rm -rf /injected-tools/${slug} 2>/dev/null; cp -a /opt/${slug}/. /injected-tools/${slug}/`,
-        ],
-        memoryLimit: '1024Mi',
-        mountSources: false,
-        volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
-      },
-    } as unknown as DevWorkspaceComponent);
-  }
+  // Read current attribute value
+  const current = (template.attributes as Record<string, string>)[TOOLS_INJECT_ATTRIBUTE] ?? '';
+  const currentTools = current
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 
-  // preStart: apply command runs the init container
-  template.commands.push({
-    id: installCmdId,
-    apply: { component: compName },
-  } as unknown as DevWorkspaceCommand);
-
-  // postStart: exec command creates symlink and updates PATH
-  const editorName = findEditorComponentName(
-    template.components as Array<{ name?: string; container?: object; volume?: object }>,
-  );
-
-  // Ensure the editor/tooling container mounts the injected-tools volume and has PATH set
-  if (editorName) {
-    const editorComp = template.components.find(c => c.name === editorName) as
-      | {
-          name: string;
-          container?: {
-            volumeMounts?: Array<{ name: string; path: string }>;
-            env?: Array<{ name: string; value: string }>;
-          };
-        }
-      | undefined;
-    if (editorComp?.container) {
-      editorComp.container.volumeMounts = editorComp.container.volumeMounts ?? [];
-      if (!editorComp.container.volumeMounts.some(vm => vm.name === 'injected-tools')) {
-        editorComp.container.volumeMounts.push({ name: 'injected-tools', path: '/injected-tools' });
-      }
-
-      // Prepend /injected-tools/bin to PATH at the container env level
-      editorComp.container.env = editorComp.container.env ?? [];
-      const pathEntry = editorComp.container.env.find(e => e.name === 'PATH');
-      if (pathEntry) {
-        if (!pathEntry.value.includes('/injected-tools/bin')) {
-          pathEntry.value = `/injected-tools/bin:${pathEntry.value}`;
-        }
-      } else {
-        // $(PATH) substitution cannot be used here — it is resolved by the operator
-        // after container startup, causing entrypoint failures. The fallback value
-        // matches the default PATH of the che-code editor image.
-        editorComp.container.env.push({
-          name: 'PATH',
-          value: '/injected-tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-        });
-      }
-    }
-  }
-
-  if (editorName) {
-    template.commands.push({
-      id: symlinkCmdId,
-      exec: {
-        component: editorName,
-        commandLine: buildPostStartCommandLine(tool),
-        workingDir: '${CHE_PROJECTS_ROOT}',
-        label: `Set up ${tool.name}`,
-      },
-    } as unknown as DevWorkspaceCommand);
-  }
-
-  // Events
-  if (!template.events) {
-    template.events = {};
-  }
-
-  template.events.preStart = template.events.preStart ?? [];
-  if (!template.events.preStart.includes(installCmdId)) {
-    template.events.preStart.push(installCmdId);
-  }
-
-  if (editorName) {
-    template.events.postStart = template.events.postStart ?? [];
-    if (!template.events.postStart.includes(symlinkCmdId)) {
-      template.events.postStart.push(symlinkCmdId);
-    }
+  // Add slug if not already present
+  if (!currentTools.includes(slug)) {
+    currentTools.push(slug);
+    (template.attributes as Record<string, string>)[TOOLS_INJECT_ATTRIBUTE] =
+      currentTools.join(',');
   }
 
   return cloned;
 }
 
 /**
- * Returns a cloned DevWorkspace spec with the given AI tool fully removed.
+ * Returns a cloned DevWorkspace spec with the given AI tool slug removed from the
+ * tools.che.io/inject attribute. The backend ToolsInjectorService handles all
+ * spec mutation (cleanup of init containers, volumes, commands, env vars).
  *
  * Accepts either a Workspace adapter or a raw DevWorkspace object.
  */
@@ -366,85 +251,32 @@ export function removeAiToolFromWorkspace(
   toolId: string,
   allTools: api.AiToolDefinition[],
 ): devfileApi.DevWorkspace {
-  const tool = allTools.find(t => t.providerId === toolId);
-  const slug = tool ? getToolSlug(tool) : toolId;
   const raw =
     'ref' in workspaceOrDevWorkspace ? workspaceOrDevWorkspace.ref : workspaceOrDevWorkspace;
   const cloned: devfileApi.DevWorkspace = JSON.parse(JSON.stringify(raw));
+
+  const tool = allTools.find(t => t.providerId === toolId);
+  if (!tool) {
+    return cloned;
+  }
+
+  const slug = getToolSlug(tool);
   const template = cloned.spec.template;
-  const compName = `${slug}-injector`;
-  const {
-    install: installCmdId,
-    symlink: symlinkCmdId,
-    run: runCmdId,
-    cleanup: cleanupCmdId,
-  } = toolCommandIds(slug);
-
-  if (template.components) {
-    template.components = template.components.filter(c => c.name !== compName);
+  if (!template?.attributes) {
+    return cloned;
   }
 
-  if (template.commands) {
-    template.commands = template.commands.filter(
-      (c: { id?: string }) =>
-        c.id !== installCmdId &&
-        c.id !== symlinkCmdId &&
-        c.id !== runCmdId &&
-        c.id !== cleanupCmdId,
-    );
-  }
+  const current = (template.attributes as Record<string, string>)[TOOLS_INJECT_ATTRIBUTE] ?? '';
+  const updatedTools = current
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s !== '' && s !== slug);
 
-  if (template.events?.preStart) {
-    template.events.preStart = template.events.preStart.filter((e: string) => e !== installCmdId);
-  }
-
-  if (template.events?.postStart) {
-    template.events.postStart = template.events.postStart.filter(
-      (e: string) => e !== symlinkCmdId && e !== cleanupCmdId,
-    );
-  }
-
-  // Add a postStart cleanup command to remove stale binaries from the shared volume.
-  // The cleanup command survives one cold start so it can execute during postStart.
-  // sanitizeStaleAiTools tracks this via the PENDING_CLEANUP_ANNOTATION: on the first
-  // cold start the annotation is present so the command is kept; after execution,
-  // the next start removes both the command and the annotation.
-  if (tool) {
-    const editorName = findEditorComponentName(
-      (template.components ?? []) as Array<{
-        name?: string;
-        container?: object;
-        volume?: object;
-      }>,
-    );
-    if (editorName) {
-      const cleanupLine = buildCleanupCommandLine(tool);
-      template.commands = template.commands ?? [];
-      template.commands.push({
-        id: cleanupCmdId,
-        exec: {
-          component: editorName,
-          commandLine: cleanupLine,
-          workingDir: '${CHE_PROJECTS_ROOT}',
-          label: `Clean up ${tool.name}`,
-        },
-      } as unknown as DevWorkspaceCommand);
-
-      template.events = template.events ?? {};
-      template.events.postStart = template.events.postStart ?? [];
-      template.events.postStart.push(cleanupCmdId);
-
-      // Mark this slug as pending cleanup so sanitizeStaleAiTools
-      // keeps the cleanup command alive for one start cycle.
-      cloned.metadata = cloned.metadata ?? {};
-      cloned.metadata.annotations = cloned.metadata.annotations ?? {};
-      const existing = cloned.metadata.annotations[PENDING_CLEANUP_ANNOTATION] ?? '';
-      const slugs = existing ? existing.split(',').filter(Boolean) : [];
-      if (!slugs.includes(slug)) {
-        slugs.push(slug);
-      }
-      cloned.metadata.annotations[PENDING_CLEANUP_ANNOTATION] = slugs.join(',');
-    }
+  if (updatedTools.length > 0) {
+    (template.attributes as Record<string, string>)[TOOLS_INJECT_ATTRIBUTE] =
+      updatedTools.join(',');
+  } else {
+    delete (template.attributes as Record<string, string>)[TOOLS_INJECT_ATTRIBUTE];
   }
 
   return cloned;
