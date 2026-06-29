@@ -282,22 +282,69 @@ export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
   return { registry, tag, tools };
 }
 
+export function isV2Registry(registry: unknown): registry is api.IAiRegistryV2 {
+  return (
+    typeof registry === 'object' &&
+    registry !== null &&
+    (registry as Record<string, unknown>).schemaVersion === '2'
+  );
+}
+
+const UNIFIED_CM_LABEL = 'app.kubernetes.io/component=ai-tool-registry,app.kubernetes.io/part-of=che.eclipse.org';
+const TOOLS_INJECTOR_CM_LABEL = 'app.kubernetes.io/part-of=tools-injector';
+
 export async function loadToolsRegistry(
   kubeConfig: k8s.KubeConfig,
   namespace: string,
 ): Promise<ToolsRegistry | null> {
-  try {
-    const coreV1 = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    const response = await coreV1.readNamespacedConfigMap({
-      name: TOOLS_INJECTOR_REGISTRY_CM,
-      namespace,
-    });
-    const data = response?.data?.['registry.json'];
-    if (!data) {
-      return null;
+  const coreApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+
+  // 1. Try unified ConfigMap from DWO namespace
+  const dwoNamespace = process.env.CHECLUSTER_CR_NAMESPACE;
+  if (dwoNamespace) {
+    try {
+      const response = await coreApi.listNamespacedConfigMap({
+        namespace: dwoNamespace,
+        labelSelector: UNIFIED_CM_LABEL,
+      });
+      if (response.items.length > 0) {
+        const cm = response.items[0];
+        for (const key of Object.keys(cm.data ?? {})) {
+          try {
+            const parsed = JSON.parse(cm.data![key]);
+            if (isV2Registry(parsed)) {
+              // V2 format — already compatible with ToolsRegistry
+              return parsed as unknown as ToolsRegistry;
+            }
+            // V1 format — transform
+            if (parsed.providers && parsed.tools && Array.isArray(parsed.tools)) {
+              return transformV1ToToolsRegistry(parsed as api.IAiRegistry);
+            }
+          } catch {
+            // skip unparseable keys
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('[ToolsInjectorService] Failed to read unified ConfigMap from DWO namespace:', e);
     }
-    return JSON.parse(data) as ToolsRegistry;
-  } catch {
-    return null;
   }
+
+  // 2. Fall back to tools-injector-registry from user namespace
+  try {
+    const response = await coreApi.listNamespacedConfigMap({
+      namespace,
+      labelSelector: TOOLS_INJECTOR_CM_LABEL,
+    });
+    if (response.items.length > 0) {
+      const data = response.items[0].data?.['registry.json'];
+      if (data) {
+        return JSON.parse(data) as ToolsRegistry;
+      }
+    }
+  } catch (e) {
+    logger.warn('[ToolsInjectorService] Failed to read tools-injector-registry:', e);
+  }
+
+  return null;
 }

@@ -10,8 +10,11 @@
  *   Red Hat, Inc. - initial API and implementation
  */
 
+import * as k8s from '@kubernetes/client-node';
+import { api } from '@eclipse-che/common';
 import {
   applyToolsInjection,
+  loadToolsRegistry,
   parseToolsInjectAttribute,
   TOOLS_INJECT_ATTRIBUTE,
   ToolsRegistry,
@@ -335,6 +338,221 @@ describe('ToolsInjectorService', () => {
       const countAfterFirst = dw.spec.template.components.length;
       applyToolsInjection(dw, SAMPLE_REGISTRY);
       expect(dw.spec.template.components).toHaveLength(countAfterFirst);
+    });
+  });
+
+  describe('loadToolsRegistry with unified ConfigMap', () => {
+    let kubeConfig: k8s.KubeConfig;
+    let listNamespacedConfigMapMock: jest.Mock;
+
+    beforeEach(() => {
+      kubeConfig = new k8s.KubeConfig();
+      listNamespacedConfigMapMock = jest.fn();
+      jest.spyOn(kubeConfig, 'makeApiClient').mockReturnValue({
+        listNamespacedConfigMap: listNamespacedConfigMapMock,
+      } as any);
+    });
+
+    afterEach(() => {
+      delete process.env.CHECLUSTER_CR_NAMESPACE;
+      jest.restoreAllMocks();
+    });
+
+    it('should prefer che-ai-tools-config from DWO namespace (V2 format)', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+      const v2Registry: api.IAiRegistryV2 = {
+        schemaVersion: '2',
+        registry: 'quay.io/che-incubator',
+        tag: 'next',
+        providers: {},
+        defaultProviders: [],
+        tools: {
+          'claude-code': {
+            description: 'Claude Code AI assistant',
+            pattern: 'init',
+            src: '/usr/local/bin/claude',
+            binary: 'claude',
+            injector: {
+              memoryLimit: '128Mi',
+              image: 'quay.io/che-incubator/tools-injector/claude-code:next',
+            },
+            editor: {
+              volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+              env: [],
+              postStart: '',
+            },
+          },
+        },
+      };
+
+      listNamespacedConfigMapMock.mockResolvedValueOnce({
+        items: [
+          {
+            metadata: { name: 'che-ai-tools-config' },
+            data: { 'registry.json': JSON.stringify(v2Registry) },
+          },
+        ],
+      });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(listNamespacedConfigMapMock).toHaveBeenCalledWith({
+        namespace: 'devworkspace-operator',
+        labelSelector: 'app.kubernetes.io/component=ai-tool-registry,app.kubernetes.io/part-of=che.eclipse.org',
+      });
+      expect(result).not.toBeNull();
+      expect(result?.registry).toBe('quay.io/che-incubator');
+      expect(result?.tag).toBe('next');
+      expect(result?.tools['claude-code']).toBeDefined();
+    });
+
+    it('should transform V1 format from DWO ConfigMap', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+      const v1Registry: api.IAiRegistry = {
+        providers: [],
+        defaultAiProviders: [],
+        tools: [
+          {
+            providerId: 'anthropic/claude',
+            tag: 'latest',
+            name: 'Claude Code',
+            url: 'https://claude.ai',
+            binary: 'claude',
+            pattern: 'init',
+            injectorImage: 'quay.io/che-incubator/tools-injector/claude-code:next',
+            envVarName: 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+            setupCommand: '',
+          },
+        ],
+      };
+
+      listNamespacedConfigMapMock.mockResolvedValueOnce({
+        items: [
+          {
+            metadata: { name: 'che-ai-tools-config' },
+            data: { 'registry.json': JSON.stringify(v1Registry) },
+          },
+        ],
+      });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(result).not.toBeNull();
+      expect(result?.tools['claude-code']).toBeDefined();
+      expect(result?.tools['claude-code'].pattern).toBe('init');
+    });
+
+    it('should fall back to tools-injector-registry from user namespace', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+      const userRegistry: ToolsRegistry = {
+        registry: 'quay.io/user-registry',
+        tag: 'latest',
+        tools: {
+          tmux: {
+            description: 'tmux',
+            pattern: 'init',
+            src: '/usr/local/bin/tmux',
+            binary: 'tmux',
+            injector: { memoryLimit: '128Mi' },
+            editor: {
+              volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+              env: [],
+              postStart: '',
+            },
+          },
+        },
+      };
+
+      listNamespacedConfigMapMock
+        .mockResolvedValueOnce({ items: [] })
+        .mockResolvedValueOnce({
+          items: [
+            {
+              metadata: { name: 'tools-injector-registry' },
+              data: { 'registry.json': JSON.stringify(userRegistry) },
+            },
+          ],
+        });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(listNamespacedConfigMapMock).toHaveBeenNthCalledWith(1, {
+        namespace: 'devworkspace-operator',
+        labelSelector: 'app.kubernetes.io/component=ai-tool-registry,app.kubernetes.io/part-of=che.eclipse.org',
+      });
+      expect(listNamespacedConfigMapMock).toHaveBeenNthCalledWith(2, {
+        namespace: 'user-ns',
+        labelSelector: 'app.kubernetes.io/part-of=tools-injector',
+      });
+      expect(result).not.toBeNull();
+      expect(result?.registry).toBe('quay.io/user-registry');
+    });
+
+    it('should return null when neither ConfigMap exists', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+
+      listNamespacedConfigMapMock
+        .mockResolvedValueOnce({ items: [] })
+        .mockResolvedValueOnce({ items: [] });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle DWO namespace API errors and fall back gracefully', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+      const userRegistry: ToolsRegistry = {
+        registry: 'quay.io/user-registry',
+        tag: 'latest',
+        tools: {},
+      };
+
+      listNamespacedConfigMapMock
+        .mockRejectedValueOnce(new Error('Forbidden'))
+        .mockResolvedValueOnce({
+          items: [
+            {
+              metadata: { name: 'tools-injector-registry' },
+              data: { 'registry.json': JSON.stringify(userRegistry) },
+            },
+          ],
+        });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(result).not.toBeNull();
+      expect(result?.registry).toBe('quay.io/user-registry');
+    });
+
+    it('should return null when CHECLUSTER_CR_NAMESPACE is not set and user ConfigMap missing', async () => {
+      listNamespacedConfigMapMock.mockResolvedValueOnce({ items: [] });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(listNamespacedConfigMapMock).toHaveBeenCalledTimes(1);
+      expect(listNamespacedConfigMapMock).toHaveBeenCalledWith({
+        namespace: 'user-ns',
+        labelSelector: 'app.kubernetes.io/part-of=tools-injector',
+      });
+      expect(result).toBeNull();
+    });
+
+    it('should handle unparseable ConfigMap data gracefully', async () => {
+      process.env.CHECLUSTER_CR_NAMESPACE = 'devworkspace-operator';
+
+      listNamespacedConfigMapMock.mockResolvedValueOnce({
+        items: [
+          {
+            metadata: { name: 'che-ai-tools-config' },
+            data: { 'registry.json': 'not valid json' },
+          },
+        ],
+      }).mockResolvedValueOnce({ items: [] });
+
+      const result = await loadToolsRegistry(kubeConfig, 'user-ns');
+
+      expect(result).toBeNull();
     });
   });
 });
