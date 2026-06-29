@@ -83,8 +83,10 @@ function buildInjectorCommand(
 }
 
 function buildPostStartCommandLine(tool: ToolDefinition, toolName: string): string {
-  const parts: string[] = ['mkdir -p /injected-tools/bin'];
+  const parts: string[] = [];
 
+  // Critical bootstrap — must succeed
+  parts.push('mkdir -p /injected-tools/bin');
   if (tool.pattern === 'init') {
     parts.push(`ln -sf /injected-tools/${tool.binary} /injected-tools/bin/${tool.binary}`);
   } else {
@@ -93,18 +95,20 @@ function buildPostStartCommandLine(tool: ToolDefinition, toolName: string): stri
     );
   }
 
+  // PATH setup — best-effort, must not block
   parts.push(
-    `grep -q injected-tools /etc/profile.d/injected-tools.sh 2>/dev/null || echo 'export PATH="/injected-tools/bin:$PATH"' > /etc/profile.d/injected-tools.sh; true`,
+    `(grep -q injected-tools /etc/profile.d/injected-tools.sh 2>/dev/null || echo 'export PATH="/injected-tools/bin:$PATH"' > /etc/profile.d/injected-tools.sh) 2>/dev/null || true`,
   );
   parts.push(
-    `grep -q injected-tools ~/.bashrc 2>/dev/null || echo 'export PATH="/injected-tools/bin:$PATH"' >> ~/.bashrc; true`,
+    `(grep -q injected-tools ~/.bashrc 2>/dev/null || echo 'export PATH="/injected-tools/bin:$PATH"' >> ~/.bashrc) 2>/dev/null || true`,
   );
 
+  // Per-tool setup — best-effort
   if (tool.editor.postStart) {
-    parts.push(`{ ${tool.editor.postStart}; } 2>/dev/null; true`);
+    parts.push(`(${tool.editor.postStart}) 2>/dev/null || true`);
   }
 
-  return parts.join(' && ');
+  return parts.join(' ; ');
 }
 
 export function applyToolsInjection(
