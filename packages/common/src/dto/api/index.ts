@@ -195,6 +195,54 @@ export interface IAiRegistry {
   defaultAiProviders: string[];
 }
 
+export interface AiToolDefinitionV2 {
+  description: string;
+  displayName?: string;
+  pattern: 'init' | 'bundle';
+  src: string;
+  binary: string;
+  injector: {
+    memoryLimit: string;
+    image: string;
+  };
+  editor: {
+    volumeMounts: Array<{ name: string; path: string }>;
+    env: Array<{ name: string; value: string }>;
+    memoryLimit?: string;
+    postStart: string;
+  };
+}
+
+export interface AiProviderDefinitionV2 {
+  name: string;
+  publisher: string;
+  icon?: string;
+  docsUrl?: string;
+  tools: string[];
+}
+
+export interface IAiRegistryV2 {
+  schemaVersion: '2';
+  registry: string;
+  tag: string;
+  infrastructure?: {
+    patch: Array<Record<string, unknown>>;
+  };
+  providers: Record<string, AiProviderDefinitionV2>;
+  defaultProviders: string[];
+  tools: Record<string, AiToolDefinitionV2>;
+}
+
+export function isV2Registry(
+  registry: IAiRegistry | IAiRegistryV2 | unknown,
+): registry is IAiRegistryV2 {
+  return (
+    typeof registry === 'object' &&
+    registry !== null &&
+    (registry as Record<string, unknown>).schemaVersion === '2'
+  );
+}
+
 export interface IAdvancedAuthorization {
   allowUsers?: string[];
   allowGroups?: string[];
