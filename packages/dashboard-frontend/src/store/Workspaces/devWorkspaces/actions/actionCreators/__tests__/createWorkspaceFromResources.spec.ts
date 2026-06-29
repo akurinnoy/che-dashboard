@@ -226,5 +226,6 @@ describe('devWorkspaces, actions', () => {
         devWorkspacesErrorAction(`Failed to create a new workspace, reason: ${errorMessage}`),
       );
     });
+
   });
 });
