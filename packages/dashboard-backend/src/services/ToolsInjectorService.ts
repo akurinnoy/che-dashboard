@@ -16,7 +16,6 @@ import { api } from '@eclipse-che/common';
 import { logger } from '@/utils/logger';
 
 export const TOOLS_INJECT_ATTRIBUTE = 'tools.che.io/inject';
-const TOOLS_INJECTOR_REGISTRY_CM = 'tools-injector-registry';
 
 const TOOLS_INJECTOR_VOLUME = 'injected-tools';
 const TOOLS_INJECTOR_VOLUME_SIZE = '256Mi';
@@ -230,7 +229,7 @@ export function applyToolsInjection(
     }
 
     // Calculate additive memory bump
-    const baseMemoryMi = parseMemoryMi((container.memoryLimit as string) ?? '512');
+    const baseMemoryMi = parseMemoryMi((container.memoryLimit as string) ?? '512Mi');
     let totalBump = 0;
     for (const { def: tool } of resolvedTools) {
       const toolMem = parseMemoryMi(tool.editor.memoryLimit ?? '0');
@@ -250,7 +249,7 @@ export function applyToolsInjection(
 
 export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
   let registry = '';
-  let tag = 'next';
+  let tag = '';
 
   const tools: Record<string, ToolDefinition> = {};
 
@@ -282,16 +281,9 @@ export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
     };
   }
 
-  return { registry, tag, tools };
+  return { registry, tag: tag || 'next', tools };
 }
 
-export function isV2Registry(registry: unknown): registry is api.IAiRegistryV2 {
-  return (
-    typeof registry === 'object' &&
-    registry !== null &&
-    (registry as Record<string, unknown>).schemaVersion === '2'
-  );
-}
 
 const UNIFIED_CM_LABEL = 'app.kubernetes.io/component=ai-tool-registry,app.kubernetes.io/part-of=che.eclipse.org';
 const TOOLS_INJECTOR_CM_LABEL = 'app.kubernetes.io/part-of=tools-injector';
@@ -350,7 +342,7 @@ export function sanitizeStaleComponents(
     if (events[eventType]) {
       const before = events[eventType].length;
       events[eventType] = events[eventType].filter(
-        (id: string) => commands.some((cmd: any) => cmd.id === id) || !id.startsWith('install-') && !id.startsWith('setup-') && !id.startsWith('symlink-'),
+        (id: string) => commands.some((cmd: any) => cmd.id === id) || !(id.startsWith('install-') || id.startsWith('setup-') || id.startsWith('symlink-')),
       );
       if (events[eventType].length !== before) modified = true;
     }
@@ -406,7 +398,7 @@ export async function loadToolsRegistry(
         for (const key of Object.keys(cm.data ?? {})) {
           try {
             const parsed = JSON.parse(cm.data![key]);
-            if (isV2Registry(parsed)) {
+            if (api.isV2Registry(parsed)) {
               // V2 format — already compatible with ToolsRegistry
               return parsed as unknown as ToolsRegistry;
             }
