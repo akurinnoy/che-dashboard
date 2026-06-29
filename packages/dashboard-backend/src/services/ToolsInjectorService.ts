@@ -229,19 +229,22 @@ export function applyToolsInjection(
       }
     }
 
-    // Memory adjustment
-    let memoryMi = parseMemoryMi((container.memoryLimit as string) ?? '');
+    // Calculate additive memory bump
+    const baseMemoryMi = parseMemoryMi((container.memoryLimit as string) ?? '512');
+    let totalBump = 0;
     for (const { def: tool } of resolvedTools) {
-      const toolMin = parseMemoryMi(tool.editor.memoryLimit ?? '');
-      if (toolMin > memoryMi) {
-        memoryMi = toolMin;
-      }
+      const toolMem = parseMemoryMi(tool.editor.memoryLimit ?? '0');
+      totalBump += toolMem;
     }
     const bundleCount = resolvedTools.filter(t => t.def.pattern === 'bundle').length;
-    memoryMi += bundleCount * BUNDLE_MEMORY_BUMP_MI;
-    if (memoryMi > 0) {
-      container.memoryLimit = `${memoryMi}Mi`;
-    }
+    totalBump += bundleCount * BUNDLE_MEMORY_BUMP_MI; // +512Mi per bundle tool for Node.js runtime
+
+    container.memoryLimit = `${baseMemoryMi + totalBump}Mi`;
+
+    // Track the bump for cleanup
+    if (!devworkspace.metadata) devworkspace.metadata = {};
+    if (!devworkspace.metadata.annotations) devworkspace.metadata.annotations = {};
+    devworkspace.metadata.annotations['tools.che.io/memory-bump'] = `${totalBump}`;
   }
 }
 

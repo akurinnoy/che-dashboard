@@ -239,7 +239,8 @@ describe('ToolsInjectorService', () => {
         (c: Record<string, unknown>) => c.name === 'editor',
       ) as unknown as Record<string, unknown>;
       const container = editor.container as Record<string, unknown>;
-      expect(container.memoryLimit).toBe('1024Mi');
+      // Base 512Mi + claude-code 1024Mi = 1536Mi
+      expect(container.memoryLimit).toBe('1536Mi');
     });
 
     it('should add 512Mi per bundle tool', () => {
@@ -249,8 +250,8 @@ describe('ToolsInjectorService', () => {
         (c: Record<string, unknown>) => c.name === 'editor',
       ) as unknown as Record<string, unknown>;
       const container = editor.container as Record<string, unknown>;
-      // max(512, 1024) + 512 * 1 = 1536
-      expect(container.memoryLimit).toBe('1536Mi');
+      // Base 512Mi + claude-code 1024Mi + gemini-cli 0Mi + bundle bump 512Mi = 2048Mi
+      expect(container.memoryLimit).toBe('2048Mi');
     });
 
     it('should add preStart events', () => {
@@ -338,6 +339,48 @@ describe('ToolsInjectorService', () => {
       const countAfterFirst = dw.spec.template.components.length;
       applyToolsInjection(dw, SAMPLE_REGISTRY);
       expect(dw.spec.template.components).toHaveLength(countAfterFirst);
+    });
+
+    it('should sum editor memory bumps additively', () => {
+      const registry = {
+        ...SAMPLE_REGISTRY,
+        tools: {
+          ...SAMPLE_REGISTRY.tools,
+          'tool-a': {
+            ...SAMPLE_REGISTRY.tools['claude-code'],
+            editor: {
+              ...SAMPLE_REGISTRY.tools['claude-code'].editor,
+              memoryLimit: '1024Mi',
+            },
+          },
+          'tool-b': {
+            ...SAMPLE_REGISTRY.tools['gemini-cli'],
+            editor: {
+              ...SAMPLE_REGISTRY.tools['gemini-cli'].editor,
+              memoryLimit: '512Mi',
+            },
+          },
+        },
+      };
+      const dw = buildDevWorkspace(
+        { [TOOLS_INJECT_ATTRIBUTE]: 'tool-a,tool-b' },
+        [{ name: 'editor', container: { image: 'che-code:latest', memoryLimit: '512Mi' } }],
+      );
+      applyToolsInjection(dw, registry);
+      const editor = dw.spec.template.components.find(
+        (c: Record<string, unknown>) => c.name === 'editor',
+      ) as unknown as Record<string, unknown>;
+      const container = editor.container as Record<string, unknown>;
+      // Base 512Mi + tool-a 1024Mi + tool-b 512Mi + bundle bump 512Mi = 2560Mi
+      expect(container.memoryLimit).toBe('2560Mi');
+    });
+
+    it('should track memory bump via annotation', () => {
+      const dw = buildDevWorkspace({ [TOOLS_INJECT_ATTRIBUTE]: 'claude-code' });
+      applyToolsInjection(dw, SAMPLE_REGISTRY);
+      const metadata = dw.metadata as unknown as { annotations?: Record<string, string> };
+      expect(metadata.annotations).toBeDefined();
+      expect(metadata.annotations?.['tools.che.io/memory-bump']).toBeDefined();
     });
   });
 
