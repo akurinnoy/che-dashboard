@@ -11,6 +11,7 @@
  */
 
 import * as k8s from '@kubernetes/client-node';
+import { api } from '@eclipse-che/common';
 
 import { logger } from '@/utils/logger';
 
@@ -244,6 +245,42 @@ export function applyToolsInjection(
       container.memoryLimit = `${memoryMi}Mi`;
     }
   }
+}
+
+export function transformV1ToToolsRegistry(v1: api.IAiRegistry): ToolsRegistry {
+  let registry = '';
+  let tag = 'next';
+
+  const tools: Record<string, ToolDefinition> = {};
+
+  for (const tool of v1.tools) {
+    const [imagePath, imageTag] = tool.injectorImage.split(':');
+    const slug = imagePath.split('/').pop() ?? tool.binary;
+
+    if (!registry && imagePath.includes('/')) {
+      const parts = imagePath.split('/');
+      registry = parts.slice(0, -2).join('/');
+    }
+    if (imageTag) {
+      tag = imageTag;
+    }
+
+    tools[slug] = {
+      description: tool.name,
+      pattern: tool.pattern,
+      src: tool.pattern === 'init' ? `/usr/local/bin/${tool.binary}` : `/opt/${slug}/`,
+      binary: tool.binary,
+      injector: { memoryLimit: '1024Mi' },
+      editor: {
+        volumeMounts: [{ name: 'injected-tools', path: '/injected-tools' }],
+        env: tool.envVarName ? [{ name: tool.envVarName, value: '' }] : [],
+        memoryLimit: undefined,
+        postStart: tool.setupCommand ?? '',
+      },
+    };
+  }
+
+  return { registry, tag, tools };
 }
 
 export async function loadToolsRegistry(
