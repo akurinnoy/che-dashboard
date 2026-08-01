@@ -247,6 +247,20 @@ export interface IDevWorkspaceResources {
   editorContent: string | undefined;
 }
 
+export interface IWorkspaceCreationParams {
+  devfileContent: string;
+  editorContent?: string;
+  editorPath?: string;
+  name?: string;
+  namespace: string;           // required — ADR-001: no auto-discovery
+  attributes?: Record<string, string>;
+}
+
+export interface IWorkspaceCreationResponse {
+  devWorkspace: V1alpha2DevWorkspace;
+  // no warning field — DevfileContext exposes no warning (spec-api-003)
+}
+
 export interface IGettingStartedSample {
   displayName: string;
   description?: string;
