@@ -394,3 +394,19 @@ export const namespacedSccSchema: JSONSchema7 = {
   },
   required: ['namespace', 'scc'],
 };
+
+export const workspaceCreationSchema: JSONSchema7 = {
+  type: 'object',
+  properties: {
+    devfileContent: { type: 'string' },
+    editorContent: { type: 'string' },
+    editorPath: { type: 'string' },
+    name: { type: 'string' },
+    namespace: { type: 'string' },
+    attributes: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+    },
+  },
+  required: ['devfileContent', 'namespace'],
+};
